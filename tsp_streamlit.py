@@ -104,8 +104,8 @@ def run_tsp_model_mtz(cities_df, timeout_sec):
     except Exception:
         obj_val = None
 
-    # Wenn keine Lösung vorliegt → einfache Rückgabe und Meldung
-    if obj_val is None or status not in ['optimal', 'timelimit']:
+    # No feasible Solution found
+    if obj_val is None:
         print('No feasible solution found.')
         return {
             'status': status,
@@ -149,14 +149,26 @@ def run_tsp_model_mtz(cities_df, timeout_sec):
         "From": route_names[:-1],
         "To": route_names[1:]
     })
-    
+
+    # Information about Solving
+    solve_time = model.getSolvingTime()
+    nodes = model.getNNodes()
+    primal = model.getPrimalbound()
+    dual = model.getDualbound()
+    gap = model.getGap()
+
     return {
-        'status': status,            
+        'status': status,
         'obj': obj_val,
         'df': route_df,
         'route_indices': route_indices,
         'route_names': route_names,
-        'cities_df': cities_df
+        'cities_df': cities_df,
+        'solve_time': solve_time,
+        'nodes': nodes,
+        'primal': primal,
+        'dual': dual,
+        'gap': gap
     }
 
 
@@ -223,8 +235,8 @@ def run_tsp_model_dfj(cities_df, timeout_sec):
     except Exception:
         obj_val = None
 
-    # Wenn keine Lösung vorliegt → einfache Rückgabe und Meldung
-    if obj_val is None or status not in ['optimal', 'timelimit']:
+    # No feasible Solution found
+    if obj_val is None:
         print('No feasible solution found.')
         return {
             'status': status,
@@ -269,15 +281,168 @@ def run_tsp_model_dfj(cities_df, timeout_sec):
         "To": route_names[1:]
     })
     
+    # Information about Solving
+    solve_time = model.getSolvingTime()
+    nodes = model.getNNodes()
+    primal = model.getPrimalbound()
+    dual = model.getDualbound()
+    gap = model.getGap()
+
     return {
-        'status': status,            
+        'status': status,
         'obj': obj_val,
         'df': route_df,
         'route_indices': route_indices,
         'route_names': route_names,
-        'cities_df': cities_df
+        'cities_df': cities_df,
+        'solve_time': solve_time,
+        'nodes': nodes,
+        'primal': primal,
+        'dual': dual,
+        'gap': gap
     }
 
+
+def run_tsp_model_fb(cities_df, timeout_sec):
+    """
+    Creates and solves the TSP using the Flow-Based formulation.
+    """
+
+    print('hi')
+    
+    number_cities = len(cities_df)
+    city_names = list(cities_df['city'])
+
+    # Define start city (index 0 by default)
+    start_city = 0  
+
+    # Calculate distances between all cities
+    dist = {(i, j): haversine(cities_df.loc[i, 'lat'], cities_df.loc[i, 'lon'], 
+                             cities_df.loc[j, 'lat'], cities_df.loc[j, 'lon']) 
+            for i in range(number_cities) 
+            for j in range(number_cities) if i != j}
+
+    # Define model
+    model = Model("TSP_Tour_FB")
+    #model.hideOutput()  # hide the solver output
+
+    # --- Define decision variables ---
+    # x[i,j] = 1, if there's a path from city i to city j; else 0
+    x = {}
+    for (i, j) in dist:
+        x[i, j] = model.addVar(vtype="B", name=f"x({i},{j})")
+
+    # --- Objective function ---
+    model.setObjective(quicksum(dist[i, j] * x[i, j] for (i, j) in dist), "minimize")
+
+    # --- Constraints ---
+    # Each city is left exactly once
+    for i in range(number_cities):
+        model.addCons(quicksum(x[i, j] for j in range(number_cities) if i != j) == 1)
+
+    # Each city is entered exactly once
+    for j in range(number_cities):
+        model.addCons(quicksum(x[i, j] for i in range(number_cities) if i != j) == 1)
+        
+    # Subtour elimination (Flow-Based)
+    # Flow variable
+    f = {}
+    for (i, j) in dist:
+        f[i, j] = model.addVar(vtype="I", lb=0, ub=(number_cities - 1), name=f"f({i},{j})")
+
+    # Balanced flow for all cities except source (city 0):
+    # Each city i != 0 receives exactly 1 unit net inflow
+    for i in range(1, number_cities):
+        model.addCons(
+            quicksum(f[j, i] for (j, k) in dist if k == i) -
+            quicksum(f[i, j] for (k, j) in dist if k == i)
+            == 1
+        )
+
+    # Flow only on used edges
+    for (i, j) in dist:
+        model.addCons(f[i, j] <= (number_cities - 1) * x[i, j])
+
+    # Add timeout
+    model.setParam("limits/time", timeout_sec)
+
+    # Start solver
+    model.optimize()
+
+    # --- Get results ---
+    status = model.getStatus()    
+
+    try:
+        obj_val = model.getObjVal()
+    except Exception:
+        obj_val = None
+
+    # No feasible Solution found
+    if obj_val is None:
+        print('No feasible solution found.')
+        return {
+            'status': status,
+            'obj': None,
+            'df': None,
+            'route_indices': None,
+            'route_names': None,
+            'cities_df': cities_df
+        }
+
+    if status == 'timelimit':
+        status = 'feasible'
+        print('Stopped due to time limit.')
+    elif status != 'optimal':
+        print('No optimal solution found!')
+    
+    obj_val = model.getObjVal()
+    
+    # Reconstruct the route
+    edges = [(i, j) for (i, j) in dist if round(model.getVal(x[i, j])) == 1]
+    
+    route_indices = [start_city]
+    current_city = start_city
+    
+    while len(route_indices) < number_cities:
+        found_next = False
+        for (i, j) in edges:
+            if i == current_city and j not in route_indices:
+                route_indices.append(j)
+                current_city = j
+                found_next = True
+                break
+    
+    route_indices.append(start_city)  # back to the first city
+    
+    route_names = [city_names[i] for i in route_indices]
+
+    # DataFrame to present the results
+    route_df = pd.DataFrame({
+        "Step": range(1, len(route_names)),
+        "From": route_names[:-1],
+        "To": route_names[1:]
+    })
+    
+    # Information about Solving
+    solve_time = model.getSolvingTime()
+    nodes = model.getNNodes()
+    primal = model.getPrimalbound()
+    dual = model.getDualbound()
+    gap = model.getGap()
+
+    return {
+        'status': status,
+        'obj': obj_val,
+        'df': route_df,
+        'route_indices': route_indices,
+        'route_names': route_names,
+        'cities_df': cities_df,
+        'solve_time': solve_time,
+        'nodes': nodes,
+        'primal': primal,
+        'dual': dual,
+        'gap': gap
+    }
 
 def show_tsp_map(cities_df, route_indices, route_names):
     """
@@ -354,13 +519,13 @@ if 'last_dataset' not in st.session_state:
 
 dataset_option = st.sidebar.radio(
     "Choose your city source:",
-    ('Random Cities Worldwide', 'Eras Tour Cities'),
+    ('Random Cities Worldwide', '"Eras Tour" Cities'),
     key='dataset_option'
 )
 
 tour_continent = None 
 
-if dataset_option == 'Eras Tour Cities':
+if dataset_option == '"Eras Tour" Cities':
     tour_continent = st.sidebar.radio(
         "Choose tour region:",
         ('World', 'Europe', 'United States'),
@@ -368,7 +533,7 @@ if dataset_option == 'Eras Tour Cities':
     )
 
 # --- Data Loading ---
-if dataset_option == 'Eras Tour Cities':
+if dataset_option == '"Eras Tour" Cities':
     if tour_continent == 'World': 
         city_data = pd.read_csv('eras_cites_all_df.csv')
     if tour_continent == 'Europe': 
@@ -388,7 +553,7 @@ if st.session_state.last_dataset != dataset_option:
         del st.session_state.city_selection
 
 # define the possible number of cities for each dataset
-if dataset_option == 'Eras Tour Cities':
+if dataset_option == '"Eras Tour" Cities':
     num_cities = max_cities
 else:
     num_cities = st.sidebar.slider('Number of cities', 
@@ -398,7 +563,7 @@ else:
                                 step=1)
 
 # --- Handle city selection based on dataset ---
-if dataset_option == 'Eras Tour Cities':
+if dataset_option == '"Eras Tour" Cities':
     cities_to_solve = city_data
     # Clear any random selection from session state
     if 'city_selection' in st.session_state:
@@ -437,10 +602,6 @@ solver_method = st.sidebar.radio(
     key='solver_method'
 )
 
-if solver_method == 'Flow-Based Formulation':
-    st.sidebar.warning(f"**{solver_method}** is not yet implemented. Please select MTZ to run.")
-
-
 # --- 3. Run Controls ---
 st.sidebar.subheader('3. Run Optimization')
 
@@ -462,21 +623,18 @@ if 'results' not in st.session_state:
 
 # --- Optimization Run ---
 if run_opt:
-    # Check if the selected solver is implemented
-    if solver_method == 'MTZ (Miller-Tucker-Zemlin)':
-        with st.spinner(f'Calculating optimal tour for {num_cities} cities using MTZ... (This may take time)'):
-            st.session_state.results = run_tsp_model_mtz(cities_to_solve, timeout_sec)
-            if st.session_state.results['status'] != 'optimal':
-                st.error(f"Solver problem: {st.session_state.results['status']}")
-    elif solver_method == 'DFJ (Danzig-Fulkerson-Johnson)':
-        with st.spinner(f'Calculating optimal tour for {num_cities} cities using DFJ... (This may take time)'):
-            st.session_state.results = run_tsp_model_dfj(cities_to_solve, timeout_sec)
-            if st.session_state.results['status'] != 'optimal':
-                st.error(f"Solver problem: {st.session_state.results['status']}")
-    else:
-        # Handle the placeholder solvers
-        st.warning(f"The selected solver **({solver_method})** is not implemented.")
-        clear_results()  # Clear any previous results
+    match solver_method:
+        case 'MTZ (Miller-Tucker-Zemlin)':
+            with st.spinner(f'Calculating optimal tour for {num_cities} cities using MTZ...'):
+                st.session_state.results = run_tsp_model_mtz(cities_to_solve, timeout_sec)
+
+        case 'DFJ (Danzig-Fulkerson-Johnson)':
+            with st.spinner(f'Calculating optimal tour for {num_cities} cities using DFJ...'):
+                st.session_state.results = run_tsp_model_dfj(cities_to_solve, timeout_sec)
+
+        case 'Flow-Based Formulation':
+            with st.spinner(f'Calculating optimal tour for {num_cities} cities using the Flow-Based Formulation...'):
+                st.session_state.results = run_tsp_model_fb(cities_to_solve, timeout_sec)
 
 # ----------------------------------------------------------------------
 # Show Results
@@ -484,13 +642,27 @@ if run_opt:
 
 if st.session_state.results is not None:
     r = st.session_state.results
-    if r['obj'] is None:
-        st.error(f"No feasible solution found. Solver status: {r['status']}")
+    if r['obj'] is None and r['status'] != 'feasible':
+        st.error(f"Timeout was reached. No feasible solution found yet.")
     else:
         st.subheader('Model Results')
         col1, col2 = st.columns(2)
-        col1.metric("Solver Status", r['status'].capitalize())
+        if r['status'] == 'feasible':
+            col1.metric(
+            label="Solver Status",
+            value=f"Feasible (Best Solution after {timeout_sec}s)"
+        )
+        else:
+            col1.metric("Solver Status", r['status'].capitalize())
         col2.metric("Distance (Tour)", f"{r['obj']:.2f} km")
+        # Information about Solving
+        st.text(
+            f"Solving Time: {r['solve_time']:.2f} s\n"
+            f"Nodes: {r['nodes']}\n"
+            f"Primal Bound: {r['primal']:.2f}\n"
+            f"Dual Bound: {r['dual']:.2f}\n"
+            f"Gap: {r['gap']*100:.2f} %"
+        )
         st.subheader('🌎 Optimal Route')
         show_tsp_map(r['cities_df'], r['route_indices'], r['route_names'])
         st.subheader('Route Details')
