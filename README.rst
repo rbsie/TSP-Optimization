@@ -60,11 +60,11 @@ A map with the computed tour and a detailed route table will appear.
 Notes
 -----
 
-* DFJ grows exponentially and will take long for larger instances. I recommend using less than 20 cities.
+* DFJ grows exponentially and will take long for larger instances. I recommend using less than 20 cities for this formulation.
 * Gurobi runs faster than PySCIPOpt. To be able to use Gurobi, a licence is needed (https://www.gurobi.com/)
 
+License
+-------
 
-Lizenz
-------
-
-MIT License
+This project is intended for private educational use within the COA lecture.
+Redistribution or public release is not permitted.
