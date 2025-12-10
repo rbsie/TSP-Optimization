@@ -25,7 +25,7 @@ def benchmark_page():
     Since the DFJ formulation causes high run times for larger instances, DFJ is only considered up to 20 cities.
     """)
 
-    df = pd.read_csv("Benchmark/benchmark_results_static.csv")
+    df = pd.read_csv("Benchmark/benchmark_results.csv")
 
     st.subheader("Raw Results")
     st.dataframe(df, use_container_width=True)
@@ -81,7 +81,7 @@ def benchmark_page():
     st.download_button(
         "Download Benchmark Study (CSV)",
         df.to_csv(index=False),
-        file_name="Benchmark/benchmark_results_static.csv"
+        file_name="Benchmark/benchmark_results.csv"
     )
 
     st.write("""

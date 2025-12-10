@@ -79,4 +79,4 @@ for formulation_name, solver in formulations.items():
             })
 
 df = pd.DataFrame(rows)
-df.to_csv("benchmark_results_static.csv", index=False)
+df.to_csv("benchmark_results.csv", index=False)
