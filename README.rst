@@ -1,14 +1,37 @@
-Optimization Model for the Travelling Salesman Problem
+Optimization for Travelling Salesman Problem
 ===========
 
 This Project optimizes the Travelling Salesman Problem (TSP) using different formulations 
-(MTZ, DFJ, Flow-Based) and solver engines (PySCIPOpt or Gurobi).
+(MTZ, DFJ, Flow-Based) and solver engines (PySCIPOpt or Gurobi). The web-based application
+allows interactive configuration, visualization, and benchmarking.
 
-The folder Datasets contains the datasets as well as the file I have used to create those.
+Features
+--------
 
-In the Benchmark folder, I did a small benchmark study to compare the runtime and quality of the different formulations (in Gurobi).
+* Interactive Streamlit interface
+* Choice between random world cities and the cities of the "Eras Tour"
+* Multiple TSP formulations for subtour elimination:
+
+  - MTZ (Miller–Tucker–Zemlin)
+  - DFJ (Dantzig–Fulkerson–Johnson)
+  - Flow-based formulation
+
+* Solver engine selection:
+
+  - PySCIPOpt
+  - Gurobi
+
+* Interactive route visualization via Folium
+* Benchmark study comparing formulations (Gurobi)
+
+Project Structure
+-----------------
 
 The main file is 'tsp_streamlit'.py, where I have implemented all the algorithms and the streamlit application.
+
+The folder 'Datasets' contains the datasets as well as the file I have used to create the data.
+
+In the 'Benchmark' folder, I conducted a small benchmark study to compare the runtime and quality of the different formulations (in Gurobi).
 
 Installation
 ------------
@@ -17,26 +40,29 @@ Installation
 
     pip install -r requirements.txt
 
-Benutzung
+Usage
 ---------
 
 .. code-block:: python
 
-    from mypkg import run
-    run()
+    streamlit run tsp_streamlit.py
 
-Features
---------
+Then open the browser and configure:
 
-* Punkt 1
-* Punkt 2
-* Punkt 3
+1. Select dataset (Random Cities / Eras Tour)  
+2. Choose solver formulation  
+3. Select solver engine  
+4. Set time limit and run the optimization  
 
-Dokumentation
--------------
+A map with the computed tour and a detailed route table will appear.
 
-Die vollständige Dokumentation findest du unter:  
-https://dein-projekt-url
+
+Notes
+-----
+
+* DFJ grows exponentially and will take long for larger instances. I recommend using less than 20 cities.
+* Gurobi runs faster than PySCIPOpt. To be able to use Gurobi, a licence is needed (https://www.gurobi.com/)
+
 
 Lizenz
 ------
