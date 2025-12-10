@@ -1,14 +1,15 @@
 """
 TSP Optimization (Streamlit App)
 
-A linear optimization interface for solving the Traveling Salesman Problem (TSP).
+A linear optimization model for solving the Traveling Salesman Problem (TSP).
 
 Features:
 - Interactive sidebar for configuration  
-- Choice between a random city dataset and 'Eras Tour' cities
+- Choice between a random city dataset and the 'Eras Tour' cities
 - Multiple TSP formulations (MTZ, DFJ, Flow-Based)  
 - Solver engine selection (PySCIPOpt or Gurobi)  
-- Interactive Folium map visualization  
+- Interactive Folium map visualization
+- Benchmark study for formulation analysis (Gurobi)
 """
 
 import streamlit as st
@@ -19,7 +20,7 @@ from streamlit_folium import st_folium
 from itertools import combinations
 from pyscipopt import Model as SCIPModel, quicksum as scip_quicksum
 from gurobipy import Model as GurobiModel, GRB, quicksum as gurobi_quicksum
-import benchmark_tsp
+from Benchmark import benchmark_tsp
 
 # ----------------------------------------------------------------------
 # Helper Functions
@@ -682,13 +683,13 @@ if page == "TSP Solver":
     # --- Data Loading ---
     if dataset_option == '"Eras Tour" Cities':
         if tour_continent == 'World': 
-            city_data = pd.read_csv('eras_cites_all_df.csv')        # 51
+            city_data = pd.read_csv('Datasets/eras_cites_all_df.csv')        # 51
         if tour_continent == 'Europe': 
-            city_data = pd.read_csv('eras_cites_europe_df.csv')     # 18
+            city_data = pd.read_csv('Datasets/eras_cites_europe_df.csv')     # 18
         if tour_continent == 'United States': 
-            city_data = pd.read_csv('eras_cites_US_df.csv')         # 23
+            city_data = pd.read_csv('Datasets/eras_cites_US_df.csv')         # 23
     elif dataset_option == 'Random Cities Worldwide':
-        city_data = pd.read_csv('top_cities_coordinates_df.csv')    # 727
+        city_data = pd.read_csv('Datasets/eras_cites_all_df.csv')    # 727
 
     # --- City Selection Logic ---
     max_cities = len(city_data)

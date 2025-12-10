@@ -25,7 +25,7 @@ def benchmark_page():
     Since the DFJ formulation causes high run times for larger instances, DFJ is only considered up to 20 cities.
     """)
 
-    df = pd.read_csv("benchmark_results_static.csv")
+    df = pd.read_csv("Benchmark/benchmark_results_static.csv")
 
     st.subheader("Raw Results")
     st.dataframe(df, use_container_width=True)
@@ -81,9 +81,8 @@ def benchmark_page():
     st.download_button(
         "Download Benchmark Study (CSV)",
         df.to_csv(index=False),
-        file_name="benchmark_results_static.csv"
+        file_name="Benchmark/benchmark_results_static.csv"
     )
-
 
     st.write("""
     For small problems (10 cities), all methods run fast and reach a perfect or near-perfect gap. For DFJ, the runtime increases a lot for more than 20 cities. At 20 cities it still finds solutions, but its gap becomes infinite, meaning that a lower bound coundn't be found. MTZ performs well for small sizes but quickly becomes slow (for > 75 cities) and unstable (for > 100 cities); from 75 cities upward it hits the time limit and the gap grows. The Flow-based model scales much better: it stays fast and accurate up to 100 cities, and even at 200 cities it finds good solutions with a small gap within 60 seconds. For more than 200 cities, both MTZ and Flow  fail to produce consistent results. Overall, Flow-based is the strongest formulation, MTZ is usable only for small to medium sizes, and DFJ is only reliable for very small instances.
