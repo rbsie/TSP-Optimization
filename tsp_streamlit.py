@@ -689,7 +689,7 @@ if page == "TSP Solver":
         if tour_continent == 'United States': 
             city_data = pd.read_csv('Datasets/eras_cites_US_df.csv')         # 23
     elif dataset_option == 'Random Cities Worldwide':
-        city_data = pd.read_csv('Datasets/eras_cites_all_df.csv')    # 727
+        city_data = pd.read_csv('Datasets/top_cities_coordinates_df.csv')    # 727
 
     # --- City Selection Logic ---
     max_cities = len(city_data)
