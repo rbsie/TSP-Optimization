@@ -1,7 +1,8 @@
 import pandas as pd
 import numpy as np
 import random
-import os
+import sys, os
+sys.path.append(os.path.dirname(os.path.dirname(__file__)))
 from tsp_streamlit import (
     run_tsp_gurobi_mtz,
     run_tsp_gurobi_dfj,
@@ -17,10 +18,10 @@ instance_dir = "instances"
 os.makedirs(instance_dir, exist_ok=True)
 
 # Load Dataset
-df_cities = pd.read_csv("top_cities_coordinates_df.csv")
+df_cities = pd.read_csv("Datasets/top_cities_coordinates_df.csv")
 
 # Define Instance Sizes
-sizes = [10, 15, 20, 30, 50, 75, 100, 200, 300, 400, 500]
+sizes = [10, 15, 20, 30, 50, 100, 300, 500]
 
 # Define Formulations
 formulations = {
@@ -29,11 +30,11 @@ formulations = {
     "Flow-Based": run_tsp_gurobi_fb
 }
 
-# Set Timeout
+# Set Timeout to 1 hour
 timeout = 3600
 
 # Define number of repeats for each instance
-repeats = 5
+repeats = 3
 
 # Run benchmark
 rows = []
@@ -55,7 +56,11 @@ for formulation_name, solver in formulations.items():
             sample.to_csv(path, index=False)
 
             # Run solver
-            res = solver(sample, 0, timeout)
+            # For large sizes, we will stop the solver when it reaches a 3% gap as there were still some long runtimes
+            print()
+            print(f"Now running: formulation {formulation_name}, size: {size}, repetition: {rep}")
+            print()
+            res = solver(sample, 0, timeout, mipgap=0.03 if size >= 50 else None) 
 
             # Save results (Nan if Gurobi found no feasible solution)
             if res["obj"] is None:

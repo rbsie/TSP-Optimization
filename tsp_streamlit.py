@@ -344,7 +344,7 @@ def run_tsp_pytorch_fb(cities_df, start_city, timeout_sec):
 # II. Gurobi Implementation
 # ----------------------------------------------------------------------
 
-def run_tsp_gurobi_mtz(cities_df, start_city, timeout_sec):
+def run_tsp_gurobi_mtz(cities_df, start_city, timeout_sec, mipgap):
     """
     Creates and solves the TSP using the MTZ formulation (Gurobi).
     """
@@ -381,6 +381,10 @@ def run_tsp_gurobi_mtz(cities_df, start_city, timeout_sec):
         for j in range(number_cities):
             if i != j and i != start_city and j != start_city:
                 model.addConstr(u[i] - u[j] + 1 <= (number_cities - 1) * (1 - x[i,j]))
+
+    # Add MIP Gap (the solver will stop when this gap is reached)
+    if mipgap is not None:
+        model.setParam("MIPGap", mipgap)
 
     # Start solver
     model.optimize()
@@ -427,7 +431,7 @@ def run_tsp_gurobi_mtz(cities_df, start_city, timeout_sec):
         'gap': model.MIPGap
     }
 
-def run_tsp_gurobi_dfj(cities_df, start_city, timeout_sec):
+def run_tsp_gurobi_dfj(cities_df, start_city, timeout_sec, mipgap):
     """
     Creates and solves the TSP using the DFJ formulation (Gurobi).
     """
@@ -456,6 +460,10 @@ def run_tsp_gurobi_dfj(cities_df, start_city, timeout_sec):
             model.addConstr(
                 gurobi_quicksum(x[i,j] for i in S for j in S if i != j) <= len(S) - 1
             )
+
+    # Add MIP Gap (the solver will stop when this gap is reached)
+    if mipgap is not None:
+        model.setParam("MIPGap", mipgap)
 
     # Start solver
     model.optimize()
@@ -501,7 +509,7 @@ def run_tsp_gurobi_dfj(cities_df, start_city, timeout_sec):
         'gap': model.MIPGap
     }
 
-def run_tsp_gurobi_fb(cities_df, start_city, timeout_sec):
+def run_tsp_gurobi_fb(cities_df, start_city, timeout_sec, mipgap):
     """
     Creates and solves the TSP using the Flow-Based formulation (Gurobi).
     """
@@ -539,6 +547,10 @@ def run_tsp_gurobi_fb(cities_df, start_city, timeout_sec):
     # flow only on selected edges
     for (i,j) in dist:
         model.addConstr(f[i,j] <= (number_cities - 1) * x[i,j])
+
+    # Add MIP Gap (the solver will stop when this gap is reached)
+    if mipgap is not None:
+        model.setParam("MIPGap", mipgap)
 
     # Start solver
     model.optimize()
