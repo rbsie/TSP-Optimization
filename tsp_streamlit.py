@@ -89,12 +89,12 @@ def run_tsp_pytorch_mtz(cities_df, start_city, timeout_sec):
     u = {} 
     for i in range(number_cities):
         if i != start_city:
-            u[i] = model.addVar(vtype="I", lb=2, ub=number_cities, name=f"u({i})")
+            u[i] = model.addVar(vtype="C", lb=2, ub=number_cities, name=f"u({i})")
         
     for i in range(number_cities):
         for j in range(number_cities):
             if i != j and i != start_city and j != start_city:
-                model.addCons(u[i] - u[j] + 1 <= (number_cities - 1)*(1 - x[i, j]))
+                model.addCons(u[i] - u[j] + number_cities * x[i, j] <= number_cities - 1)
 
     # Timeout
     model.setParam("limits/time", timeout_sec)
@@ -179,7 +179,7 @@ def run_tsp_pytorch_dfj(cities_df, start_city, timeout_sec):
     model.setObjective(scip_quicksum(dist[i, j] * x[i, j] for (i, j) in dist), "minimize")
     
     # Subtour elimination (DFJ)
-    # create Subset of size 2,..., n
+    # create Subset of size 2,..., n-1
     for k in range(2, number_cities): 
         for S in combinations(range(number_cities), k):
             model.addCons(scip_quicksum(x[i, j] for i in S for j in S if i != j) <= len(S) - 1)
@@ -273,7 +273,12 @@ def run_tsp_pytorch_fb(cities_df, start_city, timeout_sec):
     for (i, j) in dist:
         f[i, j] = model.addVar(vtype="C", lb=0, ub=number_cities - 1)
 
-    # Balanced flow for all cities except source (city 0):
+    # Net outflow = n-1 for the start city
+    model.addCons(
+        scip_quicksum(f[start_city, j] for (k, j) in dist if k == start_city)
+        == number_cities - 1
+    )
+
     # Flow balance for all cities except the start city
     for i in range(number_cities):
         if i != start_city:
@@ -285,12 +290,6 @@ def run_tsp_pytorch_fb(cities_df, start_city, timeout_sec):
                 scip_quicksum(f[i, j] for (k, j) in dist if k == i)
                 == 1
             )
-
-    # Net outflow = n-1 for the start city
-    model.addCons(
-        scip_quicksum(f[start_city, j] for (k, j) in dist if k == start_city)
-        == number_cities - 1
-    )
 
     # Flow only on used edges
     for (i, j) in dist:
@@ -363,6 +362,8 @@ def run_tsp_gurobi_mtz(cities_df, start_city, timeout_sec):
 
     # Model
     model = GurobiModel("TSP_Tour_MTZ_Gurobi")
+
+    # Set timeout
     model.Params.TimeLimit = timeout_sec
 
     # Decision variables
@@ -390,15 +391,17 @@ def run_tsp_gurobi_mtz(cities_df, start_city, timeout_sec):
     for i in range(number_cities):
         for j in range(number_cities):
             if i != j and i != start_city and j != start_city:
-                model.addConstr(u[i] - u[j] + 1 <= (number_cities - 1) * (1 - x[i,j]))
+                model.addConstr(u[i] - u[j] + number_cities * x[i, j] <= number_cities - 1)
 
     # Start solver
     model.optimize()
 
+    # Get results
     if model.SolCount == 0:
-        return {'status': 'infeasible', 'obj': None}
-
-    obj_val = model.ObjVal
+        return {'status': 'infeasible', 'obj': None} # no feasible solution found
+    
+    status = model.Status # either GRB.OPTIMAL or GRB.TIME_LIMIT
+    obj_val = model.ObjVal # length of the route in km
 
     # Reconstruct the route
     edges = [(i, j) for (i, j) in dist if x[i, j].X == 1]
@@ -423,18 +426,25 @@ def run_tsp_gurobi_mtz(cities_df, start_city, timeout_sec):
         "To": route_names[1:]
     })
 
+    # Information about Solving
+    solve_time = model.getSolvingTime()
+    nodes = model.getNNodes()
+    primal = model.getPrimalbound()
+    dual = model.getDualbound()
+    gap = model.getGap()
+
     return {
-        'status': model.Status,
+        'status': status,
         'obj': obj_val,
         'df': route_df,
         'route': route,
         'route_names': route_names,
         'cities_df': cities_df,
-        'solve_time': model.Runtime,
-        'nodes': model.NodeCount,
-        'primal': model.ObjBound,
-        'dual': model.ObjVal,
-        'gap': model.MIPGap
+        'solve_time': solve_time,
+        'nodes': nodes,
+        'primal': primal,
+        'dual': dual,
+        'gap': gap
     }
 
 def run_tsp_gurobi_dfj(cities_df, start_city, timeout_sec):
@@ -446,6 +456,8 @@ def run_tsp_gurobi_dfj(cities_df, start_city, timeout_sec):
 
     # Model
     model = GurobiModel("TSP_Tour_DFJ_Gurobi")
+
+    # Set timeout
     model.Params.TimeLimit = timeout_sec
 
     # Decision Variables
@@ -470,10 +482,12 @@ def run_tsp_gurobi_dfj(cities_df, start_city, timeout_sec):
     # Start solver
     model.optimize()
 
+    # Get results
     if model.SolCount == 0:
-        return {'status': 'infeasible', 'obj': None}
-
-    obj_val = model.ObjVal
+        return {'status': 'infeasible', 'obj': None} # no feasible solution found
+    
+    status = model.Status # either GRB.OPTIMAL or GRB.TIME_LIMIT
+    obj_val = model.ObjVal # length of the route in km
 
     # Reconstruct the route
     edges = [(i, j) for (i, j) in dist if x[i, j].X == 1]
@@ -497,18 +511,25 @@ def run_tsp_gurobi_dfj(cities_df, start_city, timeout_sec):
         "To": route_names[1:]
     })
 
+    # Information about Solving
+    solve_time = model.getSolvingTime()
+    nodes = model.getNNodes()
+    primal = model.getPrimalbound()
+    dual = model.getDualbound()
+    gap = model.getGap()
+
     return {
-        'status': model.Status,
+        'status': status,
         'obj': obj_val,
         'df': route_df,
         'route': route,
         'route_names': route_names,
         'cities_df': cities_df,
-        'solve_time': model.Runtime,
-        'nodes': model.NodeCount,
-        'primal': model.ObjBound,
-        'dual': model.ObjVal,
-        'gap': model.MIPGap
+        'solve_time': solve_time,
+        'nodes': nodes,
+        'primal': primal,
+        'dual': dual,
+        'gap': gap
     }
 
 def run_tsp_gurobi_fb(cities_df, start_city, timeout_sec):
@@ -520,6 +541,8 @@ def run_tsp_gurobi_fb(cities_df, start_city, timeout_sec):
 
     # Model
     model = GurobiModel("TSP_Tour_FB_Gurobi")
+
+    # Set timeout
     model.Params.TimeLimit = timeout_sec
 
     # Variables
@@ -538,7 +561,12 @@ def run_tsp_gurobi_fb(cities_df, start_city, timeout_sec):
     f = {(i,j): model.addVar(vtype=GRB.CONTINUOUS, lb=0, ub=number_cities-1, name=f"f({i},{j})")
          for (i,j) in dist}
     
-    # Flow constraints
+    # Net outflow = n-1 for the start city
+    model.addConstr(
+        gurobi_quicksum(f[start_city,j] for (k,j) in dist if k == start_city)
+        == number_cities - 1
+    )
+    
     # Flow balance for all cities except the start city
     for i in range(number_cities):
         if i != start_city:
@@ -551,12 +579,6 @@ def run_tsp_gurobi_fb(cities_df, start_city, timeout_sec):
                 == 1
             )
 
-    # Net outflow = n-1 for the start city
-    model.addConstr(
-        gurobi_quicksum(f[start_city,j] for (k,j) in dist if k == start_city)
-        == number_cities - 1
-    )
-
     # flow only on selected edges
     for (i,j) in dist:
         model.addConstr(f[i,j] <= (number_cities - 1) * x[i,j])
@@ -564,10 +586,12 @@ def run_tsp_gurobi_fb(cities_df, start_city, timeout_sec):
     # Start solver
     model.optimize()
 
+    # Get results
     if model.SolCount == 0:
-        return {'status': 'infeasible', 'obj': None}
-
-    obj_val = model.ObjVal
+        return {'status': 'infeasible', 'obj': None} # no feasible solution found
+    
+    status = model.Status # either GRB.OPTIMAL or GRB.TIME_LIMIT
+    obj_val = model.ObjVal # length of the route in km
 
     # Reconstruct the route
     edges = [(i, j) for (i, j) in dist if x[i, j].X == 1]
@@ -591,20 +615,26 @@ def run_tsp_gurobi_fb(cities_df, start_city, timeout_sec):
         "To": route_names[1:]
     })
 
+    # Information about Solving
+    solve_time = model.getSolvingTime()
+    nodes = model.getNNodes()
+    primal = model.getPrimalbound()
+    dual = model.getDualbound()
+    gap = model.getGap()
+
     return {
-        'status': model.Status,
+        'status': status,
         'obj': obj_val,
         'df': route_df,
         'route': route,
         'route_names': route_names,
         'cities_df': cities_df,
-        'solve_time': model.Runtime,
-        'nodes': model.NodeCount,
-        'primal': model.ObjBound,
-        'dual': model.ObjVal,
-        'gap': model.MIPGap
+        'solve_time': solve_time,
+        'nodes': nodes,
+        'primal': primal,
+        'dual': dual,
+        'gap': gap
     }
-
 
 def show_tsp_map(cities_df, route, route_names):
     """

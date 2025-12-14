@@ -34,7 +34,7 @@ formulations = {
 timeout = 1800
 
 # Define number of repeats for each instance
-repeats = 3
+repeats = 5
 
 # Run benchmark
 
@@ -55,7 +55,7 @@ for formulation_name, solver in formulations.items():
             continue
 
         for rep in range(1, repeats + 1):
-            
+
             # Skip combinations already completed
             if ((df_done["formulation"] == formulation_name) &
                 (df_done["n_cities"] == size) &
@@ -65,6 +65,7 @@ for formulation_name, solver in formulations.items():
                 continue
 
             # Create random samples for each repeat
+            # random_state=rep will ensure that the same instance is created again for same rep
             sample = df_cities.sample(n=size, random_state=rep).reset_index(drop=True)
 
             # Save those instances
