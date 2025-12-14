@@ -53,18 +53,18 @@ def get_city_data(cities_df):
 # ----------------------------------------------------------------------
 # Implementation of different formulations: MTZ, DFJ, Flow based
 # ----------------------------------------------------------------------
-# I. Pytorch Implementation
+# I. PySCIPOpt Implementation
 # ----------------------------------------------------------------------
 
-def run_tsp_pytorch_mtz(cities_df, start_city, timeout_sec):
+def run_tsp_scip_mtz(cities_df, start_city, timeout_sec):
     """
-    Creates and solves the TSP using the MTZ formulation (Pytorch).
+    Creates and solves the TSP using the MTZ formulation (PySCIPOpt).
     """
     # City data
     number_cities, city_names, dist = get_city_data(cities_df)
     
     # Define model 
-    model = SCIPModel("TSP_Tour_MTZ_Pytorch")
+    model = SCIPModel("TSP_Tour_MTZ_PySCIPOpt")
 
     # Define decision variables
     # x[i,j] = 1, if there's a path from city i to city j; else 0
@@ -150,15 +150,15 @@ def run_tsp_pytorch_mtz(cities_df, start_city, timeout_sec):
         'gap': gap
     }
 
-def run_tsp_pytorch_dfj(cities_df, start_city, timeout_sec):
+def run_tsp_scip_dfj(cities_df, start_city, timeout_sec):
     """
-    Creates and solves the TSP using the DFJ formulation (Pytorch).
+    Creates and solves the TSP using the DFJ formulation (PySCIPOpt).
     """
     # City data 
     number_cities, city_names, dist = get_city_data(cities_df)
 
     # Define model
-    model = SCIPModel("TSP_Tour_DFJ_Pytorch")
+    model = SCIPModel("TSP_Tour_DFJ_PySCIPOpt")
 
     # Define decision variables
     # x[i,j] = 1, if there's a path from city i to city j; else 0
@@ -239,15 +239,15 @@ def run_tsp_pytorch_dfj(cities_df, start_city, timeout_sec):
         'gap': gap
     }
 
-def run_tsp_pytorch_fb(cities_df, start_city, timeout_sec):
+def run_tsp_scip_fb(cities_df, start_city, timeout_sec):
     """
-    Creates and solves the TSP using the Flow-Based formulation (Pytorch).
+    Creates and solves the TSP using the Flow-Based formulation (PySCIPOpt).
     """
     # City data 
     number_cities, city_names, dist = get_city_data(cities_df) 
 
     # Define model
-    model = SCIPModel("TSP_Tour_FB_Pytorch")
+    model = SCIPModel("TSP_Tour_FB_PySCIPOpt")
 
     # Define decision variables
     # x[i,j] = 1, if there's a path from city i to city j; else 0
@@ -427,11 +427,11 @@ def run_tsp_gurobi_mtz(cities_df, start_city, timeout_sec):
     })
 
     # Information about Solving
-    solve_time = model.getSolvingTime()
-    nodes = model.getNNodes()
-    primal = model.getPrimalbound()
-    dual = model.getDualbound()
-    gap = model.getGap()
+    solve_time = model.Runtime
+    nodes = model.NodeCount
+    primal = model.ObjVal
+    dual = model.ObjBound
+    gap = model.MIPGap
 
     return {
         'status': status,
@@ -467,10 +467,14 @@ def run_tsp_gurobi_dfj(cities_df, start_city, timeout_sec):
     # Objective Function
     model.setObjective(gurobi_quicksum(dist[i,j] * x[i,j] for (i,j) in dist), GRB.MINIMIZE)
 
-    # Degree constraints
+    # Constraints
+    # Each city is left exactly once
     for i in range(number_cities):
         model.addConstr(gurobi_quicksum(x[i,j] for j in range(number_cities) if j != i) == 1)
-        model.addConstr(gurobi_quicksum(x[j,i] for j in range(number_cities) if j != i) == 1)
+
+    # Each city is entered exactly once
+    for j in range(number_cities):
+        model.addConstr(gurobi_quicksum(x[i,j] for i in range(number_cities) if i != j) == 1)
 
     # DFJ subtour elimination
     for k in range(2, number_cities):
@@ -512,11 +516,11 @@ def run_tsp_gurobi_dfj(cities_df, start_city, timeout_sec):
     })
 
     # Information about Solving
-    solve_time = model.getSolvingTime()
-    nodes = model.getNNodes()
-    primal = model.getPrimalbound()
-    dual = model.getDualbound()
-    gap = model.getGap()
+    solve_time = model.Runtime
+    nodes = model.NodeCount
+    primal = model.ObjVal
+    dual = model.ObjBound
+    gap = model.MIPGap
 
     return {
         'status': status,
@@ -552,10 +556,14 @@ def run_tsp_gurobi_fb(cities_df, start_city, timeout_sec):
     # Objective
     model.setObjective(gurobi_quicksum(dist[i,j] * x[i,j] for (i,j) in dist), GRB.MINIMIZE)
 
-    # Degree constraints
+    # Constraints
+    # Each city is left exactly once
     for i in range(number_cities):
         model.addConstr(gurobi_quicksum(x[i,j] for j in range(number_cities) if j != i) == 1)
-        model.addConstr(gurobi_quicksum(x[j,i] for j in range(number_cities) if j != i) == 1)
+
+    # Each city is entered exactly once
+    for j in range(number_cities):
+        model.addConstr(gurobi_quicksum(x[i,j] for i in range(number_cities) if i != j) == 1)
 
     # Flow Variable
     f = {(i,j): model.addVar(vtype=GRB.CONTINUOUS, lb=0, ub=number_cities-1, name=f"f({i},{j})")
@@ -579,7 +587,7 @@ def run_tsp_gurobi_fb(cities_df, start_city, timeout_sec):
                 == 1
             )
 
-    # flow only on selected edges
+    # Flow only on selected edges
     for (i,j) in dist:
         model.addConstr(f[i,j] <= (number_cities - 1) * x[i,j])
 
@@ -616,11 +624,11 @@ def run_tsp_gurobi_fb(cities_df, start_city, timeout_sec):
     })
 
     # Information about Solving
-    solve_time = model.getSolvingTime()
-    nodes = model.getNNodes()
-    primal = model.getPrimalbound()
-    dual = model.getDualbound()
-    gap = model.getGap()
+    solve_time = model.Runtime
+    nodes = model.NodeCount
+    primal = model.ObjVal
+    dual = model.ObjBound
+    gap = model.MIPGap
 
     return {
         'status': status,
@@ -842,15 +850,15 @@ if page == "TSP Solver":
             match solver_method:
                 case 'MTZ (Miller-Tucker-Zemlin)':
                     with st.spinner(f'Calculating optimal tour for {num_cities} cities using MTZ...'):
-                        st.session_state.results = run_tsp_pytorch_mtz(cities_to_solve, start_city, timeout_sec)
+                        st.session_state.results = run_tsp_scip_mtz(cities_to_solve, start_city, timeout_sec)
 
                 case 'DFJ (Danzig-Fulkerson-Johnson)':
                     with st.spinner(f'Calculating optimal tour for {num_cities} cities using DFJ...'):
-                        st.session_state.results = run_tsp_pytorch_dfj(cities_to_solve, start_city, timeout_sec)
+                        st.session_state.results = run_tsp_scip_dfj(cities_to_solve, start_city, timeout_sec)
 
                 case 'Flow-Based Formulation':
                     with st.spinner(f'Calculating optimal tour for {num_cities} cities using the Flow-Based Formulation...'):
-                        st.session_state.results = run_tsp_pytorch_fb(cities_to_solve, start_city, timeout_sec)
+                        st.session_state.results = run_tsp_scip_fb(cities_to_solve, start_city, timeout_sec)
         else:  # Gurobi
             match solver_method:
                 case 'MTZ (Miller-Tucker-Zemlin)':
