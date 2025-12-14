@@ -271,16 +271,26 @@ def run_tsp_pytorch_fb(cities_df, start_city, timeout_sec):
     # Flow variable
     f = {}
     for (i, j) in dist:
-        f[i, j] = model.addVar(vtype="I", lb=0, ub=(number_cities - 1), name=f"f({i},{j})")
+        f[i, j] = model.addVar(vtype="C", lb=0, ub=number_cities - 1)
 
     # Balanced flow for all cities except source (city 0):
-    # Each city i != 0 receives exactly 1 unit net inflow
-    for i in range(1, number_cities):
-        model.addCons(
-            scip_quicksum(f[j, i] for (j, k) in dist if k == i) -   # ingoing flow
-            scip_quicksum(f[i, j] for (k, j) in dist if k == i)     # outgoing flow
-            == 1
-        )
+    # Flow balance for all cities except the start city
+    for i in range(number_cities):
+        if i != start_city:
+            model.addCons(
+                # inflow to i
+                scip_quicksum(f[j, i] for (j, k) in dist if k == i)
+                -
+                # outflow from i
+                scip_quicksum(f[i, j] for (k, j) in dist if k == i)
+                == 1
+            )
+
+    # Net outflow = n-1 for the start city
+    model.addCons(
+        scip_quicksum(f[start_city, j] for (k, j) in dist if k == start_city)
+        == number_cities - 1
+    )
 
     # Flow only on used edges
     for (i, j) in dist:
@@ -344,7 +354,7 @@ def run_tsp_pytorch_fb(cities_df, start_city, timeout_sec):
 # II. Gurobi Implementation
 # ----------------------------------------------------------------------
 
-def run_tsp_gurobi_mtz(cities_df, start_city, timeout_sec, mipgap):
+def run_tsp_gurobi_mtz(cities_df, start_city, timeout_sec):
     """
     Creates and solves the TSP using the MTZ formulation (Gurobi).
     """
@@ -362,7 +372,7 @@ def run_tsp_gurobi_mtz(cities_df, start_city, timeout_sec, mipgap):
     u = {}
     for i in range(number_cities):
         if i != start_city:
-            u[i] = model.addVar(vtype=GRB.INTEGER, lb=2, ub=number_cities, name=f"u({i})")
+            u[i] = model.addVar(vtype=GRB.CONTINUOUS, lb=2, ub=number_cities, name=f"u({i})")
 
     # Objective Function
     model.setObjective(gurobi_quicksum(dist[i,j] * x[i,j] for (i,j) in dist), GRB.MINIMIZE)
@@ -381,10 +391,6 @@ def run_tsp_gurobi_mtz(cities_df, start_city, timeout_sec, mipgap):
         for j in range(number_cities):
             if i != j and i != start_city and j != start_city:
                 model.addConstr(u[i] - u[j] + 1 <= (number_cities - 1) * (1 - x[i,j]))
-
-    # Add MIP Gap (the solver will stop when this gap is reached)
-    if mipgap is not None:
-        model.setParam("MIPGap", mipgap)
 
     # Start solver
     model.optimize()
@@ -431,7 +437,7 @@ def run_tsp_gurobi_mtz(cities_df, start_city, timeout_sec, mipgap):
         'gap': model.MIPGap
     }
 
-def run_tsp_gurobi_dfj(cities_df, start_city, timeout_sec, mipgap):
+def run_tsp_gurobi_dfj(cities_df, start_city, timeout_sec):
     """
     Creates and solves the TSP using the DFJ formulation (Gurobi).
     """
@@ -460,10 +466,6 @@ def run_tsp_gurobi_dfj(cities_df, start_city, timeout_sec, mipgap):
             model.addConstr(
                 gurobi_quicksum(x[i,j] for i in S for j in S if i != j) <= len(S) - 1
             )
-
-    # Add MIP Gap (the solver will stop when this gap is reached)
-    if mipgap is not None:
-        model.setParam("MIPGap", mipgap)
 
     # Start solver
     model.optimize()
@@ -509,7 +511,7 @@ def run_tsp_gurobi_dfj(cities_df, start_city, timeout_sec, mipgap):
         'gap': model.MIPGap
     }
 
-def run_tsp_gurobi_fb(cities_df, start_city, timeout_sec, mipgap):
+def run_tsp_gurobi_fb(cities_df, start_city, timeout_sec):
     """
     Creates and solves the TSP using the Flow-Based formulation (Gurobi).
     """
@@ -524,9 +526,6 @@ def run_tsp_gurobi_fb(cities_df, start_city, timeout_sec, mipgap):
     x = {(i,j): model.addVar(vtype=GRB.BINARY, name=f"x({i},{j})")
          for (i,j) in dist}
 
-    f = {(i,j): model.addVar(vtype=GRB.INTEGER, lb=0, ub=number_cities-1, name=f"f({i},{j})")
-         for (i,j) in dist}
-
     # Objective
     model.setObjective(gurobi_quicksum(dist[i,j] * x[i,j] for (i,j) in dist), GRB.MINIMIZE)
 
@@ -535,22 +534,32 @@ def run_tsp_gurobi_fb(cities_df, start_city, timeout_sec, mipgap):
         model.addConstr(gurobi_quicksum(x[i,j] for j in range(number_cities) if j != i) == 1)
         model.addConstr(gurobi_quicksum(x[j,i] for j in range(number_cities) if j != i) == 1)
 
+    # Flow Variable
+    f = {(i,j): model.addVar(vtype=GRB.CONTINUOUS, lb=0, ub=number_cities-1, name=f"f({i},{j})")
+         for (i,j) in dist}
+    
     # Flow constraints
-    # net inflow = 1 for all cities except the start city
-    for i in range(1, number_cities):
-        model.addConstr(
-            gurobi_quicksum(f[j,i] for (j,k) in dist if k == i)
-            - gurobi_quicksum(f[i,j] for (k,j) in dist if k == i) 
-            == 1
-        )
+    # Flow balance for all cities except the start city
+    for i in range(number_cities):
+        if i != start_city:
+            model.addConstr(
+                # inflow to i
+                gurobi_quicksum(f[j, i] for (j, k) in dist if k == i)
+                -
+                # outflow from i
+                gurobi_quicksum(f[i, j] for (k, j) in dist if k == i)
+                == 1
+            )
+
+    # Net outflow = n-1 for the start city
+    model.addConstr(
+        gurobi_quicksum(f[start_city,j] for (k,j) in dist if k == start_city)
+        == number_cities - 1
+    )
 
     # flow only on selected edges
     for (i,j) in dist:
         model.addConstr(f[i,j] <= (number_cities - 1) * x[i,j])
-
-    # Add MIP Gap (the solver will stop when this gap is reached)
-    if mipgap is not None:
-        model.setParam("MIPGap", mipgap)
 
     # Start solver
     model.optimize()

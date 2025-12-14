@@ -30,14 +30,22 @@ formulations = {
     "Flow-Based": run_tsp_gurobi_fb
 }
 
-# Set Timeout to 1 hour
-timeout = 3600
+# Set Timeout to 30 minutes
+timeout = 1800
 
 # Define number of repeats for each instance
 repeats = 3
 
 # Run benchmark
-rows = []
+
+# Save all results in csv
+# If there is already a file, we will only do the missing instances
+results_path = "Benchmark/benchmark_results.csv"
+if os.path.exists(results_path):
+    df_done = pd.read_csv(results_path)
+else:
+    df_done = pd.DataFrame(columns=["formulation", "n_cities", "instance",
+                                    "runtime", "gap in %", "obj"])
 
 for formulation_name, solver in formulations.items():
     for size in sizes:
@@ -47,6 +55,14 @@ for formulation_name, solver in formulations.items():
             continue
 
         for rep in range(1, repeats + 1):
+            
+            # Skip combinations already completed
+            if ((df_done["formulation"] == formulation_name) &
+                (df_done["n_cities"] == size) &
+                (df_done["instance"] == rep)).any():
+
+                print(f"Skipping already completed: {formulation_name}, n={size}, rep={rep}")
+                continue
 
             # Create random samples for each repeat
             sample = df_cities.sample(n=size, random_state=rep).reset_index(drop=True)
@@ -56,32 +72,26 @@ for formulation_name, solver in formulations.items():
             sample.to_csv(path, index=False)
 
             # Run solver
-            # For large sizes, we will stop the solver when it reaches a 3% gap as there were still some long runtimes
             print()
             print(f"Now running: formulation {formulation_name}, size: {size}, repetition: {rep}")
             print()
-            res = solver(sample, 0, timeout, mipgap=0.03 if size >= 50 else None) 
+            res = solver(sample, 0, timeout) 
 
             # Save results (Nan if Gurobi found no feasible solution)
-            if res["obj"] is None:
-                rows.append({
-                    "formulation": formulation_name,
-                    "n_cities": size,
-                    "instance": rep,
-                    "runtime": np.nan,
-                    "gap in %": np.nan,
-                    "obj": np.nan
-                })
-                continue
-
-            rows.append({
+            result_row = {
                 "formulation": formulation_name,
                 "n_cities": size,
                 "instance": rep,
-                "runtime": res["solve_time"],
-                "gap in %": res["gap"] * 100,
-                "obj": res["obj"]
-            })
+                "runtime": np.nan if res["obj"] is None else res["solve_time"],
+                "gap in %": np.nan if res["obj"] is None else res["gap"] * 100,
+                "obj": np.nan if res["obj"] is None else res["obj"]
+            }
+            print("Result Row:", result_row)
 
-df = pd.DataFrame(rows)
-df.to_csv("benchmark_results.csv", index=False)
+            # append to df_done
+            df_done = pd.concat([df_done, pd.DataFrame([result_row])], ignore_index=True)
+
+            # save immediately so resume is possible
+            df_done.to_csv(results_path, index=False)
+
+print('Benchmarking completed! Results saved to Benchmark/benchmark_results.csv')
