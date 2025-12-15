@@ -96,7 +96,3 @@ for formulation_name, solver in formulations.items():
             df_done.to_csv(results_path, index=False)
 
 print('Benchmarking completed! Results saved to Benchmark/benchmark_results.csv')
-
-
-# FB 300 3 Best objective 1.403036755982e+05, best bound 1.332969508157e+05, gap 4.9940%
-# Best objective 1.418871809076e+05, best bound 1.352014252977e+05, gap 4.7120%

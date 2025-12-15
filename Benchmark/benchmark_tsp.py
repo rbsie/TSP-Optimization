@@ -27,12 +27,14 @@ def benchmark_page():
     Since the DFJ formulation causes high run times for larger instances, DFJ is only considered up to 20 cities.
     """)
 
+    # Load benchmark results
     df = pd.read_csv("Benchmark/benchmark_results.csv")
 
+    # Raw results
     st.subheader("Raw Results")
     st.dataframe(df, use_container_width=True)
 
-    # aggregated results
+    # Aggregated results
     st.subheader("Aggregated Performance per Formulation and Size")
 
     agg = (
