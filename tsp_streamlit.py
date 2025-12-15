@@ -122,6 +122,18 @@ def run_tsp_scip_mtz(cities_df, start_city, timeout_sec):
     route.append(start_city)  # back to the first city
     route_names = [city_names[i] for i in route]
 
+    # Print the variable values
+    # print()
+    # print("Varialble Values:")
+    # print("\n--- x(i,j) ---")
+    # for (i,j) in x:
+    #     if model.getVal(x[i,j]) > 0.5:
+    #         print(f"x({i},{j}) = 1")
+
+    # print("\n--- u_i ---")
+    # for i in u:
+    #     print(f"u({i}) = {model.getVal(u[i]):.2f}")
+
     # DataFrame to show the results
     route_df = pd.DataFrame({
         "Step": range(1, len(route_names)),
@@ -210,6 +222,14 @@ def run_tsp_scip_dfj(cities_df, start_city, timeout_sec):
         
     route.append(start_city)  # back to the first city
     route_names = [city_names[i] for i in route]
+
+    # Print the variable values
+    # print()
+    # print("Varialble Values:")
+    # print("\n--- x(i,j) ---")
+    # for (i,j) in x:
+    #     if model.getVal(x[i,j]) > 0.5:
+    #         print(f"x({i},{j}) = 1")
     
     # DataFrame to present the results
     route_df = pd.DataFrame({
@@ -321,6 +341,20 @@ def run_tsp_scip_fb(cities_df, start_city, timeout_sec):
     route.append(start_city)  # back to the first city
     route_names = [city_names[i] for i in route]
 
+    # Print the variable values
+    # print()
+    # print("Varialble Values:")
+    # print("\n--- x(i,j) ---")
+    # for (i,j) in x:
+    #     if model.getVal(x[i,j]) > 0.5:
+    #         print(f"x({i},{j}) = 1")
+
+    # print("\n--- f(i,j) ---")
+    # for (i,j) in f:
+    #     val = model.getVal(f[i,j])
+    #     if val > 1e-6:
+    #         print(f"f({i},{j}) = {val:.2f}")
+
     # DataFrame to present the results
     route_df = pd.DataFrame({
         "Step": range(1, len(route_names)),
@@ -420,6 +454,17 @@ def run_tsp_gurobi_mtz(cities_df, start_city, timeout_sec):
     route.append(start_city)  # back to the first city
     route_names = [city_names[i] for i in route]
 
+    # Print the variable values
+    # print()
+    # print("\n--- x(i,j) ---")
+    # for (i,j) in x:
+    #     if x[i,j].X > 0.5:
+    #         print(f"x({i},{j}) = 1")
+
+    # print("\n--- u(i) ---")
+    # for i in u:
+    #     print(f"u({i}) = {u[i].X:.2f}")
+
     # DataFrame to present the results
     route_df = pd.DataFrame({
         "Step": range(1, len(route_names)),
@@ -511,6 +556,14 @@ def run_tsp_gurobi_dfj(cities_df, start_city, timeout_sec):
     route.append(start_city)  # back to the first city
     route_names = [city_names[i] for i in route]
 
+    # Print the variable values
+    # print()
+    # print("\n--- x(i,j) ---")
+    # for (i,j) in x:
+    #     if x[i,j].X > 0.5:
+    #         print(f"x({i},{j}) = 1")
+
+    # Print the variable values
     route_df = pd.DataFrame({
         "Step": range(1, len(route_names)),
         "From": route_names[:-1],
@@ -620,6 +673,19 @@ def run_tsp_gurobi_fb(cities_df, start_city, timeout_sec):
     route.append(start_city)  # back to the first city
     route_names = [city_names[i] for i in route]
 
+    # Print the variable values
+    # print()
+    # print("\n--- x(i,j) ---")
+    # for (i,j) in x:
+    #     if x[i,j].X > 0.5:
+    #         print(f"x({i},{j}) = 1")
+
+    # print("\n--- f(i,j) ---")
+    # for (i,j) in f:
+    #     if f[i,j].X > 1e-6:
+    #         print(f"f({i},{j}) = {f[i,j].X:.2f}")
+
+    # DataFrame to present the results
     route_df = pd.DataFrame({
         "Step": range(1, len(route_names)),
         "From": route_names[:-1],
