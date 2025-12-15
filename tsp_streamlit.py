@@ -367,13 +367,9 @@ def run_tsp_gurobi_mtz(cities_df, start_city, timeout_sec):
     model.Params.TimeLimit = timeout_sec
 
     # Decision variables
-    x = {(i,j): model.addVar(vtype=GRB.BINARY, name=f"x({i},{j})")
-         for (i,j) in dist}
-
-    u = {}
-    for i in range(number_cities):
-        if i != start_city:
-            u[i] = model.addVar(vtype=GRB.CONTINUOUS, lb=2, ub=number_cities, name=f"u({i})")
+    x = {}
+    for (i, j) in dist:
+        x[i, j] = model.addVar(vtype=GRB.BINARY, name=f"x({i},{j})")
 
     # Objective Function
     model.setObjective(gurobi_quicksum(dist[i,j] * x[i,j] for (i,j) in dist), GRB.MINIMIZE)
@@ -388,6 +384,11 @@ def run_tsp_gurobi_mtz(cities_df, start_city, timeout_sec):
         model.addConstr(gurobi_quicksum(x[i,j] for i in range(number_cities) if i != j) == 1)
 
     # MTZ subtour elimination
+    u = {}
+    for i in range(number_cities):
+        if i != start_city:
+            u[i] = model.addVar(vtype=GRB.CONTINUOUS, lb=2, ub=number_cities, name=f"u({i})")
+
     for i in range(number_cities):
         for j in range(number_cities):
             if i != j and i != start_city and j != start_city:
@@ -461,8 +462,9 @@ def run_tsp_gurobi_dfj(cities_df, start_city, timeout_sec):
     model.Params.TimeLimit = timeout_sec
 
     # Decision Variables
-    x = {(i,j): model.addVar(vtype=GRB.BINARY, name=f"x({i},{j})")
-         for (i,j) in dist}
+    x = {}
+    for (i, j) in dist:
+        x[i, j] = model.addVar(vtype=GRB.BINARY, name=f"x({i},{j})")
 
     # Objective Function
     model.setObjective(gurobi_quicksum(dist[i,j] * x[i,j] for (i,j) in dist), GRB.MINIMIZE)
@@ -550,8 +552,9 @@ def run_tsp_gurobi_fb(cities_df, start_city, timeout_sec):
     model.Params.TimeLimit = timeout_sec
 
     # Variables
-    x = {(i,j): model.addVar(vtype=GRB.BINARY, name=f"x({i},{j})")
-         for (i,j) in dist}
+    x = {}
+    for (i, j) in dist:
+        x[i, j] = model.addVar(vtype=GRB.BINARY, name=f"x({i},{j})")
 
     # Objective
     model.setObjective(gurobi_quicksum(dist[i,j] * x[i,j] for (i,j) in dist), GRB.MINIMIZE)
@@ -696,7 +699,7 @@ def show_tsp_map(cities_df, route, route_names):
 st.set_page_config(page_title='TSP Optimization', layout='wide')
 st.title('Traveling Salesman Problem (TSP) Optimization')
 
-# --- Sidebar Configuration ---
+# Sidebar Configuration 
 st.sidebar.header('⚙️ Configuration')
 cities_to_solve = None
 city_data = None
@@ -716,11 +719,11 @@ if page == "TSP Solver":
     Configure your options in the sidebar and run the optimization.
     """)
 
-    # --- 1. Dataset Selection ---
+    # Dataset Selection
     st.sidebar.subheader('1. Select Dataset')
 
     # We use session state to remember which dataset was last used
-    # to reset the random sample if the user switches datasets.
+    # to reset the random sample if the user switches datasets
     if 'last_dataset' not in st.session_state:
         st.session_state.last_dataset = None
 
@@ -739,7 +742,7 @@ if page == "TSP Solver":
             key='tour_continent'
         )
 
-    # --- Data Loading ---
+    # Data Loading
     if dataset_option == '"Eras Tour" Cities':
         if tour_continent == 'World': 
             city_data = pd.read_csv('Datasets/eras_cites_all_df.csv')        # 51
@@ -750,7 +753,7 @@ if page == "TSP Solver":
     elif dataset_option == 'Random Cities Worldwide':
         city_data = pd.read_csv('Datasets/top_cities_coordinates_df.csv')    # 727
 
-    # --- City Selection Logic ---
+    # City Selection Logic
     max_cities = len(city_data)
 
     # Check if the dataset option has changed. If so, clear the old selection.
@@ -759,7 +762,7 @@ if page == "TSP Solver":
         if 'city_selection' in st.session_state:
             del st.session_state.city_selection
 
-    # define the possible number of cities for each dataset
+    # Define the possible number of cities for each dataset
     if dataset_option == '"Eras Tour" Cities':
         num_cities = max_cities
     else:
@@ -769,7 +772,7 @@ if page == "TSP Solver":
                                     value=8, 
                                     step=1)
 
-    # --- Handle city selection based on dataset ---
+    # Handle city selection based on dataset
     if dataset_option == '"Eras Tour" Cities':
         cities_to_solve = city_data
         # Clear any random selection from session state
@@ -799,7 +802,7 @@ if page == "TSP Solver":
     st.sidebar.subheader('Selected Cities:')
     st.sidebar.dataframe(selected_cities, height=200)
 
-    # --- Choose Start City ---
+    # Choose Start City
     st.sidebar.subheader("Start City")
     start_city = st.sidebar.selectbox(
         "Choose start city:",
@@ -808,7 +811,7 @@ if page == "TSP Solver":
         index=0
     )
 
-    # --- 2. Solver Selection ---
+    # Solver Selection 
     st.sidebar.subheader('2. Select Solver Method')
     solver_method = st.sidebar.radio(
         "Choose the formulation:",
@@ -818,14 +821,14 @@ if page == "TSP Solver":
         key='solver_method'
     )
 
-    # --- 3. Engine Selection ---
+    # Engine Selection
     st.sidebar.subheader('3. Select Solver Engine')
     solver_engine = st.sidebar.radio(
         "Choose the Solver Engine:",
         ("PySCIPOpt", "Gurobi"), help='Gurobi is a faster Solver Engine.'
     )
 
-    # --- 4. Run Controls ---
+    # Run Controls
     st.sidebar.subheader('4. Run Optimization')
 
     # Add Timout
@@ -844,7 +847,7 @@ if page == "TSP Solver":
     if 'results' not in st.session_state:
         st.session_state.results = None
 
-    # --- Optimization Run ---
+    # Optimization Run
     if run_opt:
         if solver_engine == "PySCIPOpt":
             match solver_method:

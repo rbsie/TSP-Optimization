@@ -27,7 +27,7 @@ Features
 Project Structure
 -----------------
 
-The main file is 'tsp_streamlit'.py, where I have implemented all the algorithms and the streamlit application.
+The main file is 'tsp_streamlit.py', where I have implemented all the algorithms and the streamlit application.
 
 The folder 'Datasets' contains the datasets as well as the file I have used to create the data.
 
@@ -71,9 +71,3 @@ Notes
 
 * DFJ grows exponentially and will take long for larger instances. I recommend using less than 20 cities for this formulation.
 * Gurobi runs faster than PySCIPOpt. To be able to use Gurobi, a licence is needed (https://www.gurobi.com/)
-
-License
--------
-
-This project is intended for private educational use within the COA lecture.
-Redistribution or public release is not permitted.
