@@ -352,7 +352,7 @@ def run_tsp_scip_fb(cities_df, start_city, timeout_sec):
     # print("\n--- f(i,j) ---")
     # for (i,j) in f:
     #     val = model.getVal(f[i,j])
-    #     if val > 1e-6:
+    #     if val > 0.00:
     #         print(f"f({i},{j}) = {val:.2f}")
 
     # DataFrame to present the results
@@ -682,7 +682,7 @@ def run_tsp_gurobi_fb(cities_df, start_city, timeout_sec):
 
     # print("\n--- f(i,j) ---")
     # for (i,j) in f:
-    #     if f[i,j].X > 1e-6:
+    #     if f[i,j].X:
     #         print(f"f({i},{j}) = {f[i,j].X:.2f}")
 
     # DataFrame to present the results
