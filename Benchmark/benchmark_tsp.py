@@ -20,6 +20,7 @@ def benchmark_page():
     - 30 cities
     - 50 cities  
     - 100 cities
+    - 300 cities
     - 500 cities
              
     For each size and formulation, 5 random instances were tested (with a time limit of 30 minutes).
