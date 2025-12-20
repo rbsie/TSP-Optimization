@@ -23,9 +23,9 @@ def benchmark_page():
     - 300 cities
     - 500 cities
              
-    For each size and formulation, 5 random instances were tested (with a time limit of 30 minutes).
+    For each size and formulation, 5 random instances were tested (same instances across formulations). The time limit was set to 30 minutes (1800 seconds).
              
-    Since the DFJ formulation causes high run times for larger instances, DFJ is only considered up to 20 cities.
+    Since the DFJ formulation causes high run times for large instances, DFJ is only considered up to 20 cities.
     """)
 
     # Load benchmark results
@@ -39,14 +39,12 @@ def benchmark_page():
     st.subheader("Aggregated Performance per Formulation and Size")
 
     agg = (
-    df.groupby(["formulation", "n_cities"])
-      .agg(
-          arith_runtime=("runtime", lambda x: np.nanmean(x)),
-          geom_runtime=("runtime", lambda x: shifted_geom_mean(x.dropna())),
-          arith_gap=("gap in %", lambda x: np.nanmean(x)),
-          geom_gap=("gap in %", lambda x: shifted_geom_mean(x.dropna()))
-      )
-      .reset_index()
+    df.groupby(["formulation", "n_cities"]).agg(
+        arith_runtime=("runtime", lambda x: np.nanmean(x)), # Arithmetic Mean of runtime
+        geom_runtime=("runtime", lambda x: shifted_geom_mean(x.dropna())), # Shifted Geometric Mean of runtime
+        arith_gap=("gap in %", lambda x: np.nanmean(x)), # Arithmetic Mean of gap
+        geom_gap=("gap in %", lambda x: shifted_geom_mean(x.dropna())) # Shifted Geometric Mean of gap
+      ).reset_index()
     )
 
     st.dataframe(agg, use_container_width=True)

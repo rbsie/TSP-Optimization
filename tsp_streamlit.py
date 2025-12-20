@@ -103,7 +103,24 @@ def run_tsp_scip_mtz(cities_df, start_city, timeout_sec):
     model.optimize()
 
     # Get results
-    status = model.getStatus() # either optimal or timeout
+    status = model.getStatus() # should be either optimal or timeout
+
+    # If no solution was found, return empty results
+    if model.getNSols() == 0:
+        return {
+            'status': status,
+            'obj': None,
+            'df': None,
+            'route': None,
+            'route_names': None,
+            'cities_df': cities_df,
+            'solve_time': model.getSolvingTime(),
+            'nodes': model.getNNodes(),
+            'primal': None,
+            'dual': None,
+            'gap': None
+        }
+
     obj_val = model.getObjVal() # length of the route in km
     
     # Reconstruct the route
@@ -204,8 +221,25 @@ def run_tsp_scip_dfj(cities_df, start_city, timeout_sec):
     model.optimize()
 
     # Get results
-    status = model.getStatus()    
-    obj_val = model.getObjVal()
+    status = model.getStatus() # should be either optimal or timeout
+
+    # If no solution was found, return empty results
+    if model.getNSols() == 0:
+        return {
+            'status': status,
+            'obj': None,
+            'df': None,
+            'route': None,
+            'route_names': None,
+            'cities_df': cities_df,
+            'solve_time': model.getSolvingTime(),
+            'nodes': model.getNNodes(),
+            'primal': None,
+            'dual': None,
+            'gap': None
+        }
+    
+    obj_val = model.getObjVal() # length of the route in km
     
     # Reconstruct the route
     edges = [(i, j) for (i, j) in dist if model.getVal(x[i, j]) == 1]
@@ -322,8 +356,25 @@ def run_tsp_scip_fb(cities_df, start_city, timeout_sec):
     model.optimize()
 
     # Get results
-    status = model.getStatus()    
-    obj_val = model.getObjVal()
+    status = model.getStatus() # should be either optimal or timeout
+
+    # If no solution was found, return empty results
+    if model.getNSols() == 0:
+        return {
+            'status': status,
+            'obj': None,
+            'df': None,
+            'route': None,
+            'route_names': None,
+            'cities_df': cities_df,
+            'solve_time': model.getSolvingTime(),
+            'nodes': model.getNNodes(),
+            'primal': None,
+            'dual': None,
+            'gap': None
+        }  
+    
+    obj_val = model.getObjVal() # length of the route in km
     
     # Reconstruct the route
     edges = [(i, j) for (i, j) in dist if model.getVal(x[i, j]) == 1]
@@ -432,10 +483,24 @@ def run_tsp_gurobi_mtz(cities_df, start_city, timeout_sec):
     model.optimize()
 
     # Get results
+    status = model.Status # should be either GRB.OPTIMAL or GRB.TIME_LIMIT
+
+    # If no solution was found, return empty results
     if model.SolCount == 0:
-        return {'status': 'infeasible', 'obj': None} # no feasible solution found
-    
-    status = model.Status # either GRB.OPTIMAL or GRB.TIME_LIMIT
+        return {
+            'status': status,
+            'obj': None,
+            'df': None,
+            'route': None,
+            'route_names': None,
+            'cities_df': cities_df,
+            'solve_time': model.Runtime,
+            'nodes': model.NodeCount,
+            'primal': None,
+            'dual': None,
+            'gap': None
+        }
+
     obj_val = model.ObjVal # length of the route in km
 
     # Reconstruct the route
@@ -526,18 +591,31 @@ def run_tsp_gurobi_dfj(cities_df, start_city, timeout_sec):
     # DFJ subtour elimination
     for k in range(2, number_cities):
         for S in combinations(range(number_cities), k):
-            model.addConstr(
-                gurobi_quicksum(x[i,j] for i in S for j in S if i != j) <= len(S) - 1
-            )
+            model.addConstr(gurobi_quicksum(x[i,j] for i in S for j in S if i != j) <= len(S) - 1)
+            print(S)
 
     # Start solver
     model.optimize()
 
     # Get results
+    status = model.Status # should be either GRB.OPTIMAL or GRB.TIME_LIMIT
+
+    # If no solution was found, return empty results
     if model.SolCount == 0:
-        return {'status': 'infeasible', 'obj': None} # no feasible solution found
+        return {
+            'status': status,
+            'obj': None,
+            'df': None,
+            'route': None,
+            'route_names': None,
+            'cities_df': cities_df,
+            'solve_time': model.Runtime,
+            'nodes': model.NodeCount,
+            'primal': None,
+            'dual': None,
+            'gap': None
+        }
     
-    status = model.Status # either GRB.OPTIMAL or GRB.TIME_LIMIT
     obj_val = model.ObjVal # length of the route in km
 
     # Reconstruct the route
@@ -650,11 +728,25 @@ def run_tsp_gurobi_fb(cities_df, start_city, timeout_sec):
     # Start solver
     model.optimize()
 
-    # Get results
+    # Get results    
+    status = model.Status # should be either GRB.OPTIMAL or GRB.TIME_LIMIT
+
+    # If no solution was found, return empty results
     if model.SolCount == 0:
-        return {'status': 'infeasible', 'obj': None} # no feasible solution found
-    
-    status = model.Status # either GRB.OPTIMAL or GRB.TIME_LIMIT
+        return {
+            'status': status,
+            'obj': None,
+            'df': None,
+            'route': None,
+            'route_names': None,
+            'cities_df': cities_df,
+            'solve_time': model.Runtime,
+            'nodes': model.NodeCount,
+            'primal': None,
+            'dual': None,
+            'gap': None
+        }
+
     obj_val = model.ObjVal # length of the route in km
 
     # Reconstruct the route
@@ -805,8 +897,11 @@ if page == "TSP Solver":
         tour_continent = st.sidebar.radio(
             "Choose tour region:",
             ('World', 'Europe', 'United States'),
-            key='tour_continent', help='For reference, the entire "Eras Tour" has a length of 102839.34 km'
+            key='tour_continent'
         )
+
+        if tour_continent == 'World':
+            st.sidebar.caption('Full Eras Tour length: 102,839 km')
 
     # Data Loading
     if dataset_option == '"Eras Tour" Cities':
@@ -948,17 +1043,22 @@ if page == "TSP Solver":
 
     GUROBI_STATUS = {
         2: "Optimal",
-        3: "INFEASIBLE",
+        3: "Infeasible",
         9: "Time Limit reached"
     }
 
+    # Display results if available
     if st.session_state.results is not None:
         r = st.session_state.results
-        if r['obj'] is None and r['status'] != 'feasible':
-            st.error(f"Timeout was reached. No feasible solution found yet.")
+
+        # Check if a feasible solution was found
+        if r['obj'] is None:
+            st.warning("No feasible solution found within the time limit.")
         else:
             st.subheader('Model Results')
             col1, col2 = st.columns(2)
+
+            # Solver Status
             if isinstance(r['status'], int):   # Gurobi
                 status_display = GUROBI_STATUS.get(r['status'], f"Code {r['status']}")
             else:                              # PySCIPOpt
@@ -966,15 +1066,21 @@ if page == "TSP Solver":
 
             col1.metric("Solver Status", status_display)
 
-            col2.metric("Distance (Tour)", f"{r['obj']:.2f} km")
+            # Objective Value
+            if r['obj'] is not None:
+                col2.metric("Distance (Tour)", f"{r['obj']:.2f} km")
+
             # Information about Solving
-            st.text(
-                f"Solving Time: {r['solve_time']:.2f} s\n"
-                f"Nodes: {r['nodes']}\n"
-                f"Primal Bound: {r['primal']:.2f}\n"
-                f"Dual Bound: {r['dual']:.2f}\n"
-                f"Gap: {r['gap']*100:.2f} %"
-            )
+            if r['primal'] is not None:
+                st.text(
+                    f"Solving Time: {r['solve_time']:.2f} s\n"
+                    f"Nodes: {r['nodes']}\n"
+                    f"Primal Bound: {r['primal']:.2f}\n"
+                    f"Dual Bound: {r['dual']:.2f}\n"
+                    f"Gap: {r['gap']*100:.2f} %"
+                )
+            else:
+                st.text(f"Solving Time: {r['solve_time']:.2f} s\nNodes: {r['nodes']}")
             st.subheader('🌎 Optimal Route')
             show_tsp_map(r['cities_df'], r['route'], r['route_names'])
             st.subheader('Route Details')
