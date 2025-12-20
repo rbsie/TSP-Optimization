@@ -805,7 +805,7 @@ if page == "TSP Solver":
         tour_continent = st.sidebar.radio(
             "Choose tour region:",
             ('World', 'Europe', 'United States'),
-            key='tour_continent'
+            key='tour_continent', help='For reference, the entire "Eras Tour" has a length of 102839.34 km'
         )
 
     # Data Loading
