@@ -2,7 +2,7 @@ import streamlit as st
 import pandas as pd
 import numpy as np
 
-def shifted_geom_mean(values, shift=0.1):
+def shifted_geom_mean(values, shift=1):
     """Compute the shifted geometric mean of a list of values."""
     v = np.array(values) + shift
     return float(np.exp(np.mean(np.log(v))) - shift)
