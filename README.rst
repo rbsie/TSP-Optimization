@@ -70,4 +70,4 @@ Notes
 -----
 
 * DFJ grows exponentially and will take long for larger instances. I recommend using less than 20 cities for this formulation.
-* Gurobi runs faster than PySCIPOpt. To be able to use Gurobi, a licence is needed (https://www.gurobi.com/)
+* Gurobi runs faster than PySCIPOpt. To be able to use Gurobi, a licence is needed (https://www.gurobi.com/). However, the code will still run for small instances without a licence.
