@@ -84,7 +84,7 @@ def run_tsp_scip_mtz(cities_df, start_city, timeout_sec):
     # Objective function
     model.setObjective(scip_quicksum(dist[i, j] * x[i, j] for (i, j) in dist), "minimize")
     
-    # Subtour elimination (MTZ)
+    # --- Subtour elimination (MTZ) ---
     # u[i] = position of city i in the tour (for all cities except start city)
     u = {} 
     for i in range(number_cities):
@@ -207,7 +207,7 @@ def run_tsp_scip_dfj(cities_df, start_city, timeout_sec):
     # Objective function
     model.setObjective(scip_quicksum(dist[i, j] * x[i, j] for (i, j) in dist), "minimize")
     
-    # Subtour elimination (DFJ)
+    # --- Subtour elimination (DFJ) ---
     # create Subset of size 2,..., n-1
     for k in range(2, number_cities): 
         for S in combinations(range(number_cities), k):
@@ -309,7 +309,7 @@ def run_tsp_scip_fb(cities_df, start_city, timeout_sec):
     for (i, j) in dist:
         x[i, j] = model.addVar(vtype="B", name=f"x({i},{j})")
 
-    # Constraints
+    # --- FB Constraints ---
     # Each city is left exactly once
     for i in range(number_cities):
         model.addCons(scip_quicksum(x[i, j] for j in range(number_cities) if i != j) == 1)
@@ -459,7 +459,7 @@ def run_tsp_gurobi_mtz(cities_df, start_city, timeout_sec):
     # Objective Function
     model.setObjective(gurobi_quicksum(dist[i,j] * x[i,j] for (i,j) in dist), GRB.MINIMIZE)
 
-    # Constraints
+    # --- MTZ Constraints ---
     # Each city is left exactly once
     for i in range(number_cities):
         model.addConstr(gurobi_quicksum(x[i,j] for j in range(number_cities) if j != i) == 1)
@@ -579,7 +579,7 @@ def run_tsp_gurobi_dfj(cities_df, start_city, timeout_sec):
     # Objective Function
     model.setObjective(gurobi_quicksum(dist[i,j] * x[i,j] for (i,j) in dist), GRB.MINIMIZE)
 
-    # Constraints
+    # --- DFJ Constraints ---
     # Each city is left exactly once
     for i in range(number_cities):
         model.addConstr(gurobi_quicksum(x[i,j] for j in range(number_cities) if j != i) == 1)
@@ -690,7 +690,7 @@ def run_tsp_gurobi_fb(cities_df, start_city, timeout_sec):
     # Objective
     model.setObjective(gurobi_quicksum(dist[i,j] * x[i,j] for (i,j) in dist), GRB.MINIMIZE)
 
-    # Constraints
+    # --- FB Constraints ---
     # Each city is left exactly once
     for i in range(number_cities):
         model.addConstr(gurobi_quicksum(x[i,j] for j in range(number_cities) if j != i) == 1)
@@ -804,6 +804,191 @@ def run_tsp_gurobi_fb(cities_df, start_city, timeout_sec):
         'dual': dual,
         'gap': gap
     }
+
+# ----------------------------------------------------------------------
+# Extra: DFJ with lazy constraints
+# ----------------------------------------------------------------------
+# Idea: we start without the DFJ subtour elimination constraints
+# if Gurobi finds an integer solution, we check if there are any subtours
+# if yes, we add the corresponding DFJ constraint to cut the subtour off
+# ----------------------------------------------------------------------
+# The code was adapted from Gurobis Jupyter Notebook Modeling Example
+# (https://www.gurobi.com/jupyter_models/traveling-salesman/)
+# ----------------------------------------------------------------------
+
+def subtour(edges, n):
+    """
+    Finds the shortest subtour in the given set of edges (i,j) with n nodes.
+    """
+    unvisited = set(range(n)) # univisited nodes
+    shortest = list(range(n)) # initial worst-case: all nodes
+
+    # Explore all cycles induced by the selected edges
+    while unvisited: 
+        cycle = []
+        current = next(iter(unvisited)) # start from any unvisited node
+
+        # Follow outgoing edges until a cycle is closed
+        while current in unvisited: 
+            unvisited.remove(current)
+            cycle.append(current)
+
+            # Each node has exactly one outgoing edge
+            next_nodes = [j for i, j in edges if i == current]
+            if not next_nodes:
+                break
+            current = next_nodes[0]
+
+        # Keep the shortest cycle found so far
+        if len(cycle) < len(shortest):
+            shortest = cycle
+
+    return shortest
+
+def subtourelim(model, where):
+    """
+    Gurobi callback for lazy DFJ subtour elimination constraints.
+
+    The callback is triggered whenever Gurobi finds a new integer-feasible
+    solution. It checks whether the solution contains a subtour and, if so,
+    adds the corresponding DFJ constraint to cut it off.
+    """
+    if where == GRB.Callback.MIPSOL: # if gurobi found a new integer solution
+        x = model._x  # decision variables x[i,j]
+        n = model._n  # number of nodes
+
+        # Get the edges selected in the current solution
+        edges = [(i,j) for (i,j) in x
+                 if model.cbGetSolution(x[i,j]) > 0.5]
+        
+        # Find the shortest cycle in the solution
+        tour = subtour(edges, n)
+
+        # If the cycle does not include all nodes, it is a subtour
+        if len(tour) < n:
+            # DFJ subtour elimination constraint
+            model.cbLazy(
+                gurobi_quicksum(x[i,j] for i in tour for j in tour if i != j)
+                <= len(tour) - 1
+            )
+
+def run_tsp_gurobi_dfj_lazy(cities_df, start_city, timeout_sec):
+    """
+    Creates and solves the TSP using the DFJ formulation (Gurobi) with lazy constraints.
+    """
+    # City Data
+    number_cities, city_names, dist = get_city_data(cities_df)
+
+    # Model
+    model = GurobiModel("TSP_Tour_DFJ_Gurobi_Lazy")
+
+    # Set timeout
+    model.Params.TimeLimit = timeout_sec
+
+    # --- Set lazy constraints ---
+    model.Params.LazyConstraints = 1
+
+    # Decision Variables
+    x = {}
+    for (i, j) in dist:
+        x[i, j] = model.addVar(vtype=GRB.BINARY, name=f"x({i},{j})")
+
+    # Objective Function
+    model.setObjective(gurobi_quicksum(dist[i,j] * x[i,j] for (i,j) in dist), GRB.MINIMIZE)
+
+    # Constraints
+    # Each city is left exactly once
+    for i in range(number_cities):
+        model.addConstr(gurobi_quicksum(x[i,j] for j in range(number_cities) if j != i) == 1)
+
+    # Each city is entered exactly once
+    for j in range(number_cities):
+        model.addConstr(gurobi_quicksum(x[i,j] for i in range(number_cities) if i != j) == 1)
+
+    # Start solver
+    # model._x = x
+    # model._n = number_cities
+    # model.optimize(dfj_callback)
+    model._x = x
+    model._n = number_cities
+    model.Params.LazyConstraints = 1
+    model.optimize(subtourelim)
+
+    # Get results
+    status = model.Status # should be either GRB.OPTIMAL or GRB.TIME_LIMIT
+
+    # If no solution was found, return empty results
+    if model.SolCount == 0:
+        return {
+            'status': status,
+            'obj': None,
+            'df': None,
+            'route': None,
+            'route_names': None,
+            'cities_df': cities_df,
+            'solve_time': model.Runtime,
+            'nodes': model.NodeCount,
+            'primal': None,
+            'dual': None,
+            'gap': None
+        }
+    
+    obj_val = model.ObjVal # length of the route in km
+
+    # Reconstruct the route
+    edges = [(i, j) for (i, j) in dist if x[i, j].X == 1]
+
+    route = [start_city]
+    current = start_city
+    
+    while len(route) < number_cities:
+        for i, j in edges:
+            if i == current and j not in route:
+                route.append(j)
+                current = j
+                break
+        
+    route.append(start_city)  # back to the first city
+    route_names = [city_names[i] for i in route]
+
+    # Print the variable values
+    # print()
+    # print("\n--- x(i,j) ---")
+    # for (i,j) in x:
+    #     if x[i,j].X > 0.5:
+    #         print(f"x({i},{j}) = 1")
+
+    # Print the variable values
+    route_df = pd.DataFrame({
+        "Step": range(1, len(route_names)),
+        "From": route_names[:-1],
+        "To": route_names[1:]
+    })
+
+    # Information about Solving
+    solve_time = model.Runtime
+    nodes = model.NodeCount
+    primal = model.ObjVal
+    dual = model.ObjBound
+    gap = model.MIPGap
+
+    return {
+        'status': status,
+        'obj': obj_val,
+        'df': route_df,
+        'route': route,
+        'route_names': route_names,
+        'cities_df': cities_df,
+        'solve_time': solve_time,
+        'nodes': nodes,
+        'primal': primal,
+        'dual': dual,
+        'gap': gap
+    }
+
+# ----------------------------------------------------------------------
+# Map Visualization
+# ----------------------------------------------------------------------
 
 def show_tsp_map(cities_df, route, route_names):
     """
@@ -972,8 +1157,15 @@ if page == "TSP Solver":
         index=0
     )
 
+    # Engine Selection
+    st.sidebar.subheader('2. Select Solver Engine')
+    solver_engine = st.sidebar.radio(
+        "Choose the Solver Engine:",
+        ("PySCIPOpt", "Gurobi"), help='Gurobi is a faster Solver Engine.'
+    )
+
     # Solver Selection 
-    st.sidebar.subheader('2. Select Solver Method')
+    st.sidebar.subheader('3. Select Solver Method')
     solver_method = st.sidebar.radio(
         "Choose the formulation:",
         ('MTZ (Miller-Tucker-Zemlin)', 
@@ -982,12 +1174,13 @@ if page == "TSP Solver":
         key='solver_method'
     )
 
-    # Engine Selection
-    st.sidebar.subheader('3. Select Solver Engine')
-    solver_engine = st.sidebar.radio(
-        "Choose the Solver Engine:",
-        ("PySCIPOpt", "Gurobi"), help='Gurobi is a faster Solver Engine.'
-    )
+    if solver_engine == 'Gurobi' and solver_method == 'DFJ (Danzig-Fulkerson-Johnson)':
+        dfj_method = st.sidebar.radio(
+            "Choose the DFJ method:",
+            ('DFJ (Standard Formulation)', 
+            'DFJ (Lazy Constraints)'),
+            key='dfj_method', help='Lazy Constraints can be more efficient for larger instances.'
+        )
 
     # Run Controls
     st.sidebar.subheader('4. Run Optimization')
@@ -1030,8 +1223,12 @@ if page == "TSP Solver":
                         st.session_state.results = run_tsp_gurobi_mtz(cities_to_solve, start_city, timeout_sec)
 
                 case 'DFJ (Danzig-Fulkerson-Johnson)':
-                    with st.spinner(f'Calculating optimal tour for {num_cities} cities using DFJ...'):
-                        st.session_state.results = run_tsp_gurobi_dfj(cities_to_solve, start_city, timeout_sec)
+                    if dfj_method == 'DFJ (Standard Formulation)':
+                        with st.spinner(f'Calculating optimal tour for {num_cities} cities using DFJ...'):
+                            st.session_state.results = run_tsp_gurobi_dfj(cities_to_solve, start_city, timeout_sec)
+                    else:  # Lazy Constraints
+                        with st.spinner(f'Calculating optimal tour for {num_cities} cities using DFJ with Lazy Constraints...'):
+                            st.session_state.results = run_tsp_gurobi_dfj_lazy(cities_to_solve, start_city, timeout_sec)
 
                 case 'Flow-Based Formulation':
                     with st.spinner(f'Calculating optimal tour for {num_cities} cities using the Flow-Based Formulation...'):

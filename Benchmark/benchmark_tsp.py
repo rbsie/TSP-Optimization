@@ -25,7 +25,7 @@ def benchmark_page():
              
     For each size and formulation, 5 random instances were tested (same instances across formulations). The time limit was set to 30 minutes (1800 seconds).
              
-    Since the DFJ formulation causes high run times for large instances, DFJ is only considered up to 20 cities.
+    For the DFJ formulation, the lazy constraint approach will be used.
     """)
 
     # Load benchmark results
@@ -51,7 +51,10 @@ def benchmark_page():
 
     # Plot: Runtime (Arithmetic + Geometric)
     st.subheader("Runtime Comparison (Arithmetic + Shifted Geometric Mean)")
-
+    st.write("""
+    We used a shifted geometric mean with a shift of 1.
+    """)
+             
     tab_a, tab_g = st.tabs(["Arithmetic", "Geometric"])
 
     with tab_a:

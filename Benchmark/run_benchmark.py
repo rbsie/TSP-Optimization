@@ -5,7 +5,7 @@ import sys, os
 sys.path.append(os.path.dirname(os.path.dirname(__file__)))
 from tsp_streamlit import (
     run_tsp_gurobi_mtz,
-    run_tsp_gurobi_dfj,
+    run_tsp_gurobi_dfj_lazy,
     run_tsp_gurobi_fb
 )
 
@@ -26,7 +26,7 @@ sizes = [10, 15, 20, 30, 50, 100, 300, 500]
 # Define Formulations
 formulations = {
     "MTZ": run_tsp_gurobi_mtz,
-    "DFJ": run_tsp_gurobi_dfj,
+    "DFJ": run_tsp_gurobi_dfj_lazy,
     "Flow-Based": run_tsp_gurobi_fb
 }
 
@@ -49,10 +49,6 @@ else:
 
 for formulation_name, solver in formulations.items():
     for size in sizes:
-
-        # Limit DFJ to 20 cities since preprocessing takes too long
-        if formulation_name == "DFJ" and size > 20:
-            continue
 
         for rep in range(1, repeats + 1):
 
@@ -83,7 +79,7 @@ for formulation_name, solver in formulations.items():
                 "formulation": formulation_name,
                 "n_cities": size,
                 "instance": rep,
-                "runtime": np.nan if res["obj"] is None else res["solve_time"],
+                "runtime": timeout if res["obj"] is None else res["solve_time"],
                 "gap in %": np.nan if res["obj"] is None else res["gap"] * 100,
                 "obj": np.nan if res["obj"] is None else res["obj"]
             }
