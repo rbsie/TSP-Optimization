@@ -1067,14 +1067,15 @@ if page == "TSP Solver":
     if 'last_dataset' not in st.session_state:
         st.session_state.last_dataset = None
 
+    # Dataset option
     dataset_option = st.sidebar.radio(
         "Choose your city source:",
         ('Random Cities Worldwide', '"Eras Tour" Cities'),
         key='dataset_option'
     )
 
+    # Additional option for "Eras Tour" dataset
     tour_continent = None 
-
     if dataset_option == '"Eras Tour" Cities':
         tour_continent = st.sidebar.radio(
             "Choose tour region:",
@@ -1110,10 +1111,10 @@ if page == "TSP Solver":
         num_cities = max_cities
     else:
         num_cities = st.sidebar.slider('Number of cities', 
-                                    min_value=3, 
-                                    max_value=min(max_cities, 500), 
-                                    value=8, 
-                                    step=1)
+                        min_value=3, 
+                        max_value=min(max_cities, 500), 
+                        value=10, 
+                        step=1)
 
     # Handle city selection based on dataset
     if dataset_option == '"Eras Tour" Cities':
@@ -1171,6 +1172,7 @@ if page == "TSP Solver":
         key='solver_method'
     )
 
+    # Additional option for DFJ with Gurobi
     if solver_engine == 'Gurobi' and solver_method == 'DFJ (Danzig-Fulkerson-Johnson)':
         dfj_method = st.sidebar.radio(
             "Choose the DFJ method:",
@@ -1183,9 +1185,10 @@ if page == "TSP Solver":
     st.sidebar.subheader('4. Run Optimization')
 
     # Add Timout
-    timeout_sec = st.sidebar.slider('⏱️ Time limit (seconds)', 5, 100, 10, step=1, help='For a large number of cities the solver may take a long time. It may be useful to set a time limit.')
+    timeout_sec = st.sidebar.slider('⏱️ Time limit (seconds)', 5, 100, 10, step=1, 
+                    help='For a large number of cities the solver may take a long time. It may be useful to set a time limit.')
 
-
+    # Reset Functionality
     def clear_results():
         """
         Resets the session state.
@@ -1235,6 +1238,12 @@ if page == "TSP Solver":
 # Show Results
 # ----------------------------------------------------------------------
 
+    PYSCIP_STATUS = {
+    "optimal": "Optimal",
+    "timelimit": "Time Limit reached",
+    "infeasible": "Infeasible"
+    }
+
     GUROBI_STATUS = {
         2: "Optimal",
         3: "Infeasible",
@@ -1256,7 +1265,7 @@ if page == "TSP Solver":
             if isinstance(r['status'], int):   # Gurobi
                 status_display = GUROBI_STATUS.get(r['status'], f"Code {r['status']}")
             else:                              # PySCIPOpt
-                status_display = r['status'].capitalize()
+                status_display = PYSCIP_STATUS.get(r['status'], f"Code {r['status']}")
 
             col1.metric("Solver Status", status_display)
 
