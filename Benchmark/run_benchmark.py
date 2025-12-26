@@ -5,6 +5,7 @@ import sys, os
 sys.path.append(os.path.dirname(os.path.dirname(__file__)))
 from tsp_streamlit import (
     run_tsp_gurobi_mtz,
+    run_tsp_gurobi_dfj,
     run_tsp_gurobi_dfj_lazy,
     run_tsp_gurobi_fb
 )
@@ -26,7 +27,7 @@ sizes = [10, 15, 20, 30, 50, 100, 300, 500]
 # Define Formulations
 formulations = {
     "MTZ": run_tsp_gurobi_mtz,
-    "DFJ_Standard": run_tsp_gurobi_dfj_lazy, # standard version
+    "DFJ_Standard": run_tsp_gurobi_dfj, # standard version
     "DFJ_Lazy": run_tsp_gurobi_dfj_lazy, # lazy version
     "Flow-Based": run_tsp_gurobi_fb
 }
