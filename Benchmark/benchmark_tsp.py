@@ -25,7 +25,7 @@ def benchmark_page():
              
     For each size and formulation, 5 random instances were tested (same instances across formulations). The time limit was set to 30 minutes (1800 seconds).
              
-    For the DFJ formulation, the lazy constraint approach will be used.
+    For the DFJ formulation, the lazy constraint approach will be used, since the standard approach takes too long for larger instances.
     """)
 
     # Load benchmark results
@@ -73,3 +73,7 @@ def benchmark_page():
 
     with tab_g:
         st.line_chart(agg.pivot(index="n_cities", columns="formulation", values="geom_gap"))
+
+    st.write("""
+    Note: The DFJ formulation could only find a feasible solution for 2 out of the 5 repeats for 500 cities within the time limit. 
+    """)
