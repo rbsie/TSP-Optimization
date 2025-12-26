@@ -14,7 +14,7 @@ np.random.seed(42)
 random.seed(42)
 
 # Create folder to save cities
-instance_dir = "instances"
+instance_dir = "Instances"
 os.makedirs(instance_dir, exist_ok=True)
 
 # Load Dataset
@@ -26,7 +26,8 @@ sizes = [10, 15, 20, 30, 50, 100, 300, 500]
 # Define Formulations
 formulations = {
     "MTZ": run_tsp_gurobi_mtz,
-    "DFJ": run_tsp_gurobi_dfj_lazy, # lazy version
+    "DFJ_Standard": run_tsp_gurobi_dfj_lazy, # standard version
+    "DFJ_Lazy": run_tsp_gurobi_dfj_lazy, # lazy version
     "Flow-Based": run_tsp_gurobi_fb
 }
 
@@ -51,6 +52,10 @@ for formulation_name, solver in formulations.items():
     for size in sizes:
 
         for rep in range(1, repeats + 1):
+
+            if formulation_name == "DFJ_Standard" and size > 20:
+                print(f"Skipping DFJ Standard for size {size} (too large)")
+                continue
 
             # Skip combinations already completed
             if ((df_done["formulation"] == formulation_name) &

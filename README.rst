@@ -13,7 +13,7 @@ Features
 * Multiple TSP formulations for subtour elimination:
 
   - MTZ (Miller–Tucker–Zemlin)
-  - DFJ (Dantzig–Fulkerson–Johnson)
+  - DFJ (Dantzig–Fulkerson–Johnson) - Standard and Lazy constraints
   - Flow-based formulation
 
 * Solver engine selection:
