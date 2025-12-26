@@ -13,7 +13,7 @@ Features
 * Multiple TSP formulations for subtour elimination:
 
   - MTZ (Miller–Tucker–Zemlin)
-  - DFJ (Dantzig–Fulkerson–Johnson) - Standard and Lazy constraints
+  - DFJ (Dantzig–Fulkerson–Johnson)
   - Flow-based formulation
 
 * Solver engine selection:
@@ -69,5 +69,5 @@ A map with the computed tour and a detailed route table will appear.
 Notes
 -----
 
-* DFJ grows exponentially and will take long for larger instances. I recommend using less than 20 cities for this formulation.
+* DFJ grows exponentially and will take long for larger instances. I recommend using less than 20 cities for this formulation. For Gurobi, I implemented a lazy constraint version to speed up the solving process.
 * Gurobi runs faster than PySCIPOpt. To be able to use Gurobi, a licence is needed (https://www.gurobi.com/). However, the code will still run for small instances without a licence.
