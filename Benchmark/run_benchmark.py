@@ -54,8 +54,8 @@ for formulation_name, solver in formulations.items():
 
         for rep in range(1, repeats + 1):
 
+            # Skip DFJ Standard for sizes > 20
             if formulation_name == "DFJ_Standard" and size > 20:
-                print(f"Skipping DFJ Standard for size {size} (too large)")
                 continue
 
             # Skip combinations already completed
