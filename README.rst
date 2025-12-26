@@ -59,8 +59,8 @@ Usage
 Then open the browser and configure:
 
 1. Select dataset (Random Cities / Eras Tour)  
-2. Choose solver formulation  
-3. Select solver engine  
+2. Select solver engine
+3. Choose solver formulation
 4. Set time limit and run the optimization  
 
 A map with the computed tour and a detailed route table will appear.
