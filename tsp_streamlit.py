@@ -20,7 +20,7 @@ from streamlit_folium import st_folium
 from itertools import combinations
 from pyscipopt import Model as SCIPModel, quicksum as scip_quicksum
 from gurobipy import Model as GurobiModel, GRB, quicksum as gurobi_quicksum
-from Benchmark import benchmark_tsp
+from Benchmark import benchmark_streamlit
 
 # ----------------------------------------------------------------------
 # Helper Functions
@@ -1285,4 +1285,4 @@ if page == "TSP Solver":
             st.dataframe(r['df'])
 
 elif page == "Benchmark Study":
-    benchmark_tsp.benchmark_page()
+    benchmark_streamlit.benchmark_page()
