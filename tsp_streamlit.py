@@ -139,7 +139,7 @@ def run_tsp_scip_mtz(cities_df, start_city, timeout_sec):
     route.append(start_city)  # back to the first city
     route_names = [city_names[i] for i in route]
 
-    # Print the variable values
+    ## Print the variable values
     # print()
     # print("Varialble Values:")
     # print("\n--- x(i,j) ---")
@@ -257,7 +257,7 @@ def run_tsp_scip_dfj(cities_df, start_city, timeout_sec):
     route.append(start_city)  # back to the first city
     route_names = [city_names[i] for i in route]
 
-    # Print the variable values
+    ## Print the variable values
     # print()
     # print("Varialble Values:")
     # print("\n--- x(i,j) ---")
@@ -392,7 +392,7 @@ def run_tsp_scip_fb(cities_df, start_city, timeout_sec):
     route.append(start_city)  # back to the first city
     route_names = [city_names[i] for i in route]
 
-    # Print the variable values
+    ## Print the variable values
     # print()
     # print("Varialble Values:")
     # print("\n--- x(i,j) ---")
@@ -459,7 +459,6 @@ def run_tsp_gurobi_mtz(cities_df, start_city, timeout_sec):
     # Objective Function
     model.setObjective(gurobi_quicksum(dist[i,j] * x[i,j] for (i,j) in dist), GRB.MINIMIZE)
 
-    # --- MTZ Constraints ---
     # Each city is left exactly once
     for i in range(number_cities):
         model.addConstr(gurobi_quicksum(x[i,j] for j in range(number_cities) if j != i) == 1)
@@ -468,7 +467,7 @@ def run_tsp_gurobi_mtz(cities_df, start_city, timeout_sec):
     for j in range(number_cities):
         model.addConstr(gurobi_quicksum(x[i,j] for i in range(number_cities) if i != j) == 1)
 
-    # MTZ subtour elimination
+    # --- MTZ subtour elimination ---
     u = {}
     for i in range(number_cities):
         if i != start_city:
@@ -519,7 +518,7 @@ def run_tsp_gurobi_mtz(cities_df, start_city, timeout_sec):
     route.append(start_city)  # back to the first city
     route_names = [city_names[i] for i in route]
 
-    # Print the variable values
+    ## Print the variable values
     # print()
     # print("\n--- x(i,j) ---")
     # for (i,j) in x:
@@ -579,7 +578,6 @@ def run_tsp_gurobi_dfj(cities_df, start_city, timeout_sec):
     # Objective Function
     model.setObjective(gurobi_quicksum(dist[i,j] * x[i,j] for (i,j) in dist), GRB.MINIMIZE)
 
-    # --- DFJ Constraints ---
     # Each city is left exactly once
     for i in range(number_cities):
         model.addConstr(gurobi_quicksum(x[i,j] for j in range(number_cities) if j != i) == 1)
@@ -588,7 +586,7 @@ def run_tsp_gurobi_dfj(cities_df, start_city, timeout_sec):
     for j in range(number_cities):
         model.addConstr(gurobi_quicksum(x[i,j] for i in range(number_cities) if i != j) == 1)
 
-    # DFJ subtour elimination
+    # --- DFJ subtour elimination ---
     for k in range(2, number_cities):
         for S in combinations(range(number_cities), k):
             model.addConstr(gurobi_quicksum(x[i,j] for i in S for j in S if i != j) <= len(S) - 1)
@@ -634,7 +632,7 @@ def run_tsp_gurobi_dfj(cities_df, start_city, timeout_sec):
     route.append(start_city)  # back to the first city
     route_names = [city_names[i] for i in route]
 
-    # Print the variable values
+    ## Print the variable values
     # print()
     # print("\n--- x(i,j) ---")
     # for (i,j) in x:
@@ -690,7 +688,6 @@ def run_tsp_gurobi_fb(cities_df, start_city, timeout_sec):
     # Objective
     model.setObjective(gurobi_quicksum(dist[i,j] * x[i,j] for (i,j) in dist), GRB.MINIMIZE)
 
-    # --- FB Constraints ---
     # Each city is left exactly once
     for i in range(number_cities):
         model.addConstr(gurobi_quicksum(x[i,j] for j in range(number_cities) if j != i) == 1)
@@ -699,7 +696,7 @@ def run_tsp_gurobi_fb(cities_df, start_city, timeout_sec):
     for j in range(number_cities):
         model.addConstr(gurobi_quicksum(x[i,j] for i in range(number_cities) if i != j) == 1)
 
-    # Flow Variable
+    # --- FB Constraits ---
     f = {(i,j): model.addVar(vtype=GRB.CONTINUOUS, lb=0, ub=number_cities-1, name=f"f({i},{j})")
          for (i,j) in dist}
     
@@ -765,7 +762,7 @@ def run_tsp_gurobi_fb(cities_df, start_city, timeout_sec):
     route.append(start_city)  # back to the first city
     route_names = [city_names[i] for i in route]
 
-    # Print the variable values
+    ## Print the variable values
     # print()
     # print("\n--- x(i,j) ---")
     # for (i,j) in x:
@@ -808,9 +805,9 @@ def run_tsp_gurobi_fb(cities_df, start_city, timeout_sec):
 # ----------------------------------------------------------------------
 # Extra: DFJ with lazy constraints
 # ----------------------------------------------------------------------
-# Idea: we start without the DFJ subtour elimination constraints
-# if Gurobi finds an integer solution, we check if there are any subtours
-# if yes, we add the corresponding DFJ constraint to cut the subtour off
+# Idea: We start without the DFJ subtour elimination constraints.
+# If Gurobi finds an integer solution, we check if there are any subtours.
+# If yes, we add the corresponding DFJ constraint to cut the subtour off.
 # ----------------------------------------------------------------------
 # The code was adapted from Gurobis Jupyter Notebook Modeling Example
 # (https://www.gurobi.com/jupyter_models/traveling-salesman/)
@@ -951,7 +948,7 @@ def run_tsp_gurobi_dfj_lazy(cities_df, start_city, timeout_sec):
     route.append(start_city)  # back to the first city
     route_names = [city_names[i] for i in route]
 
-    # Print the variable values
+    ## Print the variable values
     # print()
     # print("\n--- x(i,j) ---")
     # for (i,j) in x:

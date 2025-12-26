@@ -14,7 +14,7 @@ np.random.seed(42)
 random.seed(42)
 
 # Create folder to save cities
-instance_dir = "Instances"
+instance_dir = "instances"
 os.makedirs(instance_dir, exist_ok=True)
 
 # Load Dataset
