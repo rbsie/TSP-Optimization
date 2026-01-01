@@ -903,9 +903,6 @@ def run_tsp_gurobi_dfj_lazy(cities_df, start_city, timeout_sec):
         model.addConstr(gurobi_quicksum(x[i,j] for i in range(number_cities) if i != j) == 1)
 
     # Start solver
-    # model._x = x
-    # model._n = number_cities
-    # model.optimize(dfj_callback)
     model._x = x
     model._n = number_cities
     model.Params.LazyConstraints = 1
