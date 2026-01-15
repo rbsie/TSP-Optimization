@@ -58,6 +58,10 @@ Usage
 
 If this fails, exit and restart the virtual environment, then try again.
 
+.. code-block:: python
+    deactivate
+    source .venv/bin/activate
+
 Then open the browser and configure:
 
 1. Select dataset (Random Cities / Eras Tour)  
