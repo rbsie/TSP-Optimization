@@ -59,6 +59,7 @@ Usage
 If this fails, exit and restart the virtual environment, then try again.
 
 .. code-block:: bash
+
     deactivate
     source .venv/bin/activate
 
