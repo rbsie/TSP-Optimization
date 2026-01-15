@@ -56,6 +56,8 @@ Usage
 
     streamlit run tsp_streamlit.py
 
+If this fails, exit and restart the virtual environment, then try again.
+
 Then open the browser and configure:
 
 1. Select dataset (Random Cities / Eras Tour)  
