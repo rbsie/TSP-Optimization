@@ -52,13 +52,13 @@ Installation
 Usage
 ---------
 
-.. code-block:: python
+.. code-block:: bash
 
     streamlit run tsp_streamlit.py
 
 If this fails, exit and restart the virtual environment, then try again.
 
-.. code-block:: python
+.. code-block:: bash
     deactivate
     source .venv/bin/activate
 
