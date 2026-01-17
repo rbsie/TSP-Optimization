@@ -1,4 +1,4 @@
-Optimization for Travelling Salesman Problem
+The Travelling Salesman Problem
 ===========
 
 This Project optimizes the Travelling Salesman Problem (TSP) using different formulations 
