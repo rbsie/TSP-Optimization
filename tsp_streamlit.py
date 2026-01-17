@@ -309,7 +309,6 @@ def run_tsp_scip_fb(cities_df, start_city, timeout_sec):
     for (i, j) in dist:
         x[i, j] = model.addVar(vtype="B", name=f"x({i},{j})")
 
-    # --- FB Constraints ---
     # Each city is left exactly once
     for i in range(number_cities):
         model.addCons(scip_quicksum(x[i, j] for j in range(number_cities) if i != j) == 1)
